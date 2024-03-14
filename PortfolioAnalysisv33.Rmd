@@ -1,0 +1,1149 @@
+---
+title: "Portfolio Analysis"
+author: "Kavya Kumar"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    theme: cosmo
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+  pdf_document:
+    toc: yes
+---
+<style type="text/css">
+ h1.title {
+   font-size: 20px;
+ }
+ td {  /* Table  */
+   font-size: 14px;
+ }
+ h1 { /* Header 1 */
+   font-size: 20px;
+ }
+ h2 { /* Header 2 */
+   font-size: 18px;
+ }
+ h3 { /* Header 3 */
+   font-size: 16px;
+ }
+ blockquote { /* BlockQuote */
+   font-size: 14px;
+   color: DarkBlue;
+ </style>
+ <style type="text/css">
+.main-container { /* dynamically fill window */
+  max-width: 90% !important;
+  margin: auto;
+}
+</style>
+
+# Initialization and Setup
+
+## R Markdown HTML Output Setup 
+
+Here we set some global options for the rest of the document.  Following is a table of parameters used.  
+
+|Option            |Meaning                                        |
+|------------------|-----------------------------------------------|
+|echo=TRUE         |show all code blocks in output
+|error=FALSE       |Stop on any error
+|attr.source       |Puts long code segments in scroll-able windows
+|attr.output       |Puts long output into scroll-able windowns
+|dplyt inform      |supresses the dpylr summarize warning (see [link](https://stackoverflow.com/questions/62140483/how-to-interpret-dplyr-message-summarise-regrouping-output-by-x-override))    
+
+```{r label="asetup"}
+knitr::opts_chunk$set(echo = TRUE, error=FALSE)
+
+knitr::opts_chunk$set(attr.source='style="max-height: 300px;"')
+knitr::opts_chunk$set(attr.output='style="max-height: 400px;"')
+
+options(dplyr.summarise.inform = FALSE)
+```
+
+## Library Definitions
+
+```{r label="alibrary-definitions", message=FALSE}
+
+# R Package Installation - Install these if you haven't already
+#install.packages("tidyverse")    # Universal pkg for data frames, etc.
+#install.packages("lubridate")    # Facilitates working with Dates
+#install.packages("tidyquant")    # Quant Support for the IRR Formula
+#install.packages("dplyr")        # Working with dataframes
+#install.packages("scales")       # Determine breaks and labels for graphs
+#install.packages("forcats")      # Working with categorical Variable (Factors)
+#install.packages("ggrepel")      # Helpful in replacing text strings
+#install.packages("openxlsx")     # reading / writing Excel Files
+#install.packages("flextable")    # used to show tabular information
+
+# R Package Definitions                                       
+library(tidyverse)
+library(lubridate)
+library(tidyquant)  
+library(dplyr)
+library(scales)
+library(forcats)
+library(ggrepel)
+library(openxlsx)
+library(flextable)
+```
+
+\newpage
+
+# Overview
+
+The purpose of this RMarkdown Script is to: 
+
+* Import project data from various sources (e.g. various **Reforecast System Tables** and the **DealPath System**)  
+* CleanUp the data and make it "R Friendly"  
+* Perform some calculations and data manipulations (see below)  
+* Create Factor variables for several data elements that can be used in subsequent charting and reporting    
+* Combine all of the data into the **dfProjAll** dataframe  
+
+## Working Directory
+
+These are the directories referenced in this RMarkdown Script
+
+Directory           |Contents / Description                                   |
+--------------------|---------------------------------------------------------|
+Root Directory      |This RMarkdown File
+00 Data Extracts    |CSV files extracted from source data
+01 CSV Files        |CSV files extracted that are renamed for this script
+02 xlsx Files       |xlsx files saved by this script
+03 df Files         |dataframe files saved by this script
+04 xml Files        |distribution files (output from RMarkdown)
+05 documentation    |Additional documentation
+
+## Input Files
+
+rVariable        |Directory Names         |csv File Name          |  
+-----------------|------------------------|-----------------------|  
+iREF_Projects    |Basic Project Info      |R_ProjectSummary.csv  
+iREF_Dealpath    |From a Dealpath extract |R_Dealpath.csv  
+iREF_Concentrate |Concentration Balances  |R_CashFlowDetail.csv 
+iREF_Summary     |Financial Information   |R_CashFlowSummary.csv 
+
+## Output Files
+
+|rVariable       |Description
+|----------------|-----------------------------------------------------|  
+|oxl_ProjAll     |xlsw file of all data used / referenced  
+|odf_ProjAll     |rda file of find dataframes 
+|                |dfProjAll    - Project data from all sources         |
+|                |dfChart1Data - Charting Data                         |
+|                |df_cMth      - Monthly Originations                  |
+|                |df_cQtr      - Quarterly Originations
+
+## Global Variables
+
+In this section, we will:  
+
+* Remove all variables from the environment  
+* Set the Working Directory  
+* Set Global Variables for Input / Output Files
+
+> * Please review / confirm these variables names  
+> * Put the original files in 00 Data Extracts (as backup)  
+> * Copy and Rename into 01 CSV Files for actual use  
+
+```{r label="setup-input-filenames"}
+
+options(dplyr.summarise.inform = FALSE)
+
+rm(list = ls())
+
+myDirectory <- "~/Dropbox/Board Package Material/CC R Portfolio"
+setwd(myDirectory)
+
+iREF_Summary     <- paste0(myDirectory,"/01 CSV Files/R_CashFlowSummary.csv")
+iREF_Projects    <- paste0(myDirectory,"/01 CSV Files/R_ProjectSummary.csv")
+iREF_Dealpath    <- paste0(myDirectory,"/01 CSV Files/R_Dealpath.csv")
+iREF_Concentrate <- paste0(myDirectory,"/01 CSV Files/R_CashFlowDetail.csv")
+
+oxl_ProjAll      <- paste0(myDirectory,"/02 xlsx Files/dfProjAll.xlsx")
+odf_ProjAll      <- paste0(myDirectory,"/03 df Files/dfProjAll.rda")
+oht_EHF1         <- paste0(myDirectory,"/03 df Files/Portfolio_EHF1.html")
+oht_EHF2         <- paste0(myDirectory,"/03 df Files/Portfolio_EHF2.html")
+iht_Package      <- paste0(myDirectory,"/04 html Files/2022-07-30_Portfolio_Package.Rmd")
+#iht_Package      <- paste0(myDirectory,"/Test Package.Rmd")
+
+```
+
+## Define Global Variables
+
+Now define Global Variables, as follows:
+
+* Set the date ranges for the last month of the Quarter used in Concentration Balance Reporting  
+* Working strings for EHF1 and EHF2  
+* Set the order of how Builder's appear (see f_builder_3letter factor). 
+  * Note: These are the 3Letter codes set by this program during data import  
+
+> Please review / adjust these variables
+
+```{r label="setup-global-variables"}
+iQtr1         <- interval(start=ymd("20230901"), end=ymd("20230930"))
+iQtr2         <- interval(start=ymd("20231201"), end=ymd("20231231"))
+iQtr3         <- interval(start=ymd("20240301"), end=ymd("20240330"))
+
+iEHF1 <- "EHF1"
+iEHF2 <- "EHF2"
+
+wBuilderOrder <- c("LEN", "MTH", "HOV", "NHC", "CHM", "LGI", "SDH", "LSE", "TOL", "EMP", "PHM")
+```
+
+# Process: iREF_Projects
+
+iREF_Project contains basic project information that has been extracted from the Reforecast System.  Note that we strip out a lot of unused columns (see the -select code, below).  In the future, if any of these columns are needed, they could be included.  
+
+## Import CSV Files  
+
+* Read the iREF_Projects file  
+
+```{r label="Import-REF-Projects"}
+
+REF_Project <- read_csv(file=iREF_Projects,
+                        show_col_types = FALSE,    # show how types were assigned
+                        col_names = TRUE,          # first row is col headings
+                        skip_empty_rows = TRUE,    # skip rows that are all empty
+                        name_repair = "unique")    # make sure col names are unique
+```
+
+## DataFrame CleanUp
+
+* CleanUp the Names and de-select unnecessary columns
+
+```{r label="CleanUp-REF-Projects"}
+
+dfProject <- REF_Project %>%
+
+  janitor::clean_names() %>% 
+  
+  select(-c(create_timestamp, 
+            hss_id, 
+            clawback_builder_percent,
+            clawback_gross_margin_percent,
+            clawback_irr,
+            option_term_guarantee_percent,
+            last_work_day,
+            clawback_floor,
+            takedown_at_coe,
+            clawback,
+            hiatus,
+            option_fee_floor,
+            option_fee_cap,
+            site_day_of_month,
+            target_irr,
+            option_fee_initial,
+            access_id,
+            builder_id,
+            fund_sub_id,
+            option_day_of_month
+    )) 
+```
+
+## Rename selected columns
+
+* Rename selected columns - (just personal preference)
+
+```{r label="DataCleanup-REF-Projects"}
+
+dfProject <-dfProject %>%
+  
+  rename(project_id           = id,
+         proj_name            = name,
+         opt_term             = term,
+         d_term_start         = term_start,
+         d_actuals_thru       = actuals_thru_date,
+         builder              = builder_id_builder,
+         fund_sub             = name_fund_subsidiary,
+         msa                  = name_metropolitan_area
+     )
+```
+
+## Create Columns and Organize
+
+* Create a few new columns  
+* Convert all columns that start with d_ to the Date Class  
+* Eliminate rows with fund_sub == "In Process" (may not be necessary?) 
+* Create a hardcoded, case sensitive fundid column with EHF1 or EHF2
+* Create a hardcoded, case sensitive builder_3letter ID 
+  * Note: When the builder_3letter factor is created, it is in a specific order
+  * See wBuilderOrder
+* Create the final dfProject dataframe    
+
+```{r label="Organize-REF-Project"}
+
+dfProject <-dfProject %>%
+
+  mutate(d_term_end = d_term_start + months(opt_term)) %>% 
+  mutate(across(starts_with("d_"), as.Date)) %>% 
+  filter(fund_sub != "In Process") %>% 
+  mutate(fundid = case_when(
+                            str_detect(fund_sub,"EHF1") ~ "EHF1",
+                            str_detect(fund_sub,"EHF2") ~ "EHF2",
+                            TRUE ~ "EHFX"),     # If other conditions were not met
+                            .after = fund_sub) %>% 
+  mutate(builder_3letter = builder, .after = builder) %>% 
+ 
+  select(c(project_id, proj_name, fundid, builder_3letter, city, state, msa, 
+           num_lot_types, num_lots, 
+           d_term_start, opt_term, d_term_end, 
+           status, actuals_thru_period, d_actuals_thru))
+ 
+```
+
+## Control Totals
+
+Control Totals for iREF_Projects by Fund and by Fund-Builder:  
+
+* Note: the "Totals" line is being generated by the adorn_totals() function  
+
+```{r label="Totals-iREF-Project"}
+
+dfProjectCT1 <- dfProject %>%
+  group_by(fundid) %>%
+  summarise(tot_lots = sum(num_lots), 
+            project_count = n()) %>% 
+  janitor::adorn_totals()
+  flextable(dfProjectCT1) %>% 
+            set_header_labels(
+            fundid = "Fund ID", 
+            tot_lots = "Total Lots", 
+            project_count = "# of Projects") %>% 
+            add_footer_lines("iREF_Projects Control Totals") %>% 
+            fontsize(part="footer", size=10) %>% 
+            theme_vanilla() %>%
+            autofit()
+
+dfProjectCT1 <- dfProject %>%
+  group_by(fundid, builder_3letter) %>%
+  summarise(tot_lots = sum(num_lots), project_count = n()) %>% 
+  janitor::adorn_totals()
+  flextable(dfProjectCT1) %>% 
+            set_header_labels(
+            fundid = "Fund ID",
+            builder_3letter = "Builder ID",
+            tot_lots = "Total Lots", 
+            project_count = "# of Projects") %>% 
+            add_footer_lines("iREF_Projects Control Totals") %>% 
+            fontsize(part="footer", size=10) %>% 
+            theme_vanilla() %>%
+            autofit()
+```
+
+## DataFrame Details
+
+These are the variables that are carried forward from iREF_Projects
+
+```{r label="DataFrame-dfProject"}
+str(dfProject)
+```
+
+## List of Global Variables
+
+This is included to confirm that all temporary variables have been removed
+
+```{r}
+
+rm(REF_Project, dfProjectCT1)
+ls(sorted=TRUE)
+
+```
+
+# Process: iREF_DealPath
+
+The DealPath files contain certain project information (see details below) that are sourced from DealPath; these data elements are not stored in the Reforecast System.  If additional project information is needed from DealPath in the future - this is the spot to import, clean up and prepare it for inclusion in the dfProjAll dataframe
+
+## Import CSV File  
+
+```{r label="Import-iREF-Dealpath"}
+REF_Dealpath <- read_csv(file=iREF_Dealpath,
+                        show_col_types = FALSE,    # show how types were assigned
+                        col_names = TRUE,          # first row is col headings
+                        skip_empty_rows = TRUE,    # skip rows that are all empty
+                        name_repair = "unique")    # make sure col names are unique
+```
+
+## Dataframe CleanUp
+
+```{r label="CleanUp-iRef-Dealpath"}
+
+dfDealpath <- REF_Dealpath %>%
+  
+  janitor::clean_names() %>% 
+  
+  rename(project_id           = ref_id,
+         dealpath_name        = deal_name,
+         hb_margin_dollars    = bld_gross_margin,
+         hb_margin_percent    = bld_gross_margin_percent_of_home_revenue) %>% 
+  
+  select(-c(dealpath_name, hb_margin_dollars)) %>% 
+  mutate(hb_margin_percent    = hb_margin_percent * 100)
+
+```
+
+## dfDealPath DataFrame details
+
+This is included to :  
+
+* see the final DealPath variables that will be added to dfProjAll.  
+* Review total record counts (should be one for every Project)
+
+```{r}
+str(dfDealpath)
+```
+
+## Join into dfProject
+
+* Now merge the DealPath information into dfProject
+* Get columns from X and Y dataframes 
+* Using project_id key from both dataframes  
+* If there are any duplicate column names, prefix with x & y to keep them unique  
+* No need to keep the keys from both dataframes - just keep one  
+
+```{r label="Join-iREF-Dealpath"}
+
+dfProject <- inner_join (x = dfProject, y = dfDealpath,  
+                         by = c("project_id"),        
+                         copy = FALSE,
+                         suffix = c(".X", ".Y"), 
+                         keep = FALSE)
+
+```
+
+## Control totals
+
+These should be the same as above
+
+* Note: the "Totals" line is being generated by the adorn_totals() function  
+
+```{r label="ControlTotals-REF-Dealpath"}
+
+dfProjectCT1 <- dfProject %>%
+  group_by(fundid) %>%
+  summarise(tot_lots = sum(num_lots), project_count = n()) %>% 
+  janitor::adorn_totals()
+  flextable(dfProjectCT1) %>% 
+            set_header_labels(
+            fundid = "Fund ID", 
+            tot_lots = "Total Lots", 
+            project_count = "# of Projects") %>% 
+            add_footer_lines("iREF_DealPath Control Totals") %>% 
+            fontsize(part="footer", size=10) %>% 
+            theme_vanilla() %>%
+            autofit()
+
+dfProjectCT1 <- dfProject %>%
+  group_by(fundid, builder_3letter) %>%
+  summarise(tot_lots = sum(num_lots), project_count = n()) %>% 
+  janitor::adorn_totals()
+  flextable(dfProjectCT1) %>% 
+            set_header_labels(
+            fundid = "Fund ID",
+            builder_3letter = "Builder ID",
+            tot_lots = "Total Lots", 
+            project_count = "# of Projects") %>% 
+            add_footer_lines("iREF_DealPath Control Totals") %>% 
+            fontsize(part="footer", size=10) %>% 
+            theme_vanilla() %>%
+            autofit()
+  
+```
+
+## List of Global Variables
+
+```{r}
+
+rm(REF_Dealpath, dfDealpath, dfProjectCT1)
+ls(sorted=TRUE)
+
+```
+
+# Process: iREF_Concentrate
+
+The iREF_Concentrate data file has been extracted from the Reforecast System.  It contains the Concentration Balance for each Project as of the end of every period during the Option Term.  The only Concentration Balances we want are the balances for:
+
+* The quarter end date being reported in the Portfolio Review
+* The "next" two Quarter End Dates
+
+The way this is done, is 
+
+* Filter the file down so that it only contains the "rows" of Concentration Balances for the three quarters we are interested in
+* Then pivot this dataframe so the "rows" become "columns"
+  * In R, this is referred to as converting a dataframe from LONG to WIDE
+* Then join these three balances into the final dataframe
+
+## Import CSV File
+
+```{r label="Import-iREF-Concentrate"}
+
+REF_Concentrate <- read_csv(file=iREF_Concentrate,
+                         show_col_types = FALSE,    # show how types were assigned
+                         col_names = TRUE,          # first row is col headings
+                         skip_empty_rows = TRUE,    # skip rows that are all empty
+                         name_repair = "unique")    # make sure col names are unique
+```
+
+## CleanUp Dataframe
+
+* CleanUp Names
+* Rename some columns to something manageable
+* Get only those entries that fall withint the last month of the three reporting quarters
+* Add a description cell to each row 
+* Drop a couple unused columns
+* Pivot-Wider to transpose the rows into columns
+
+```{r "CleanUp-iREF-Concentrate"}
+
+dfConcentrate <- REF_Concentrate %>%
+
+  janitor::clean_names() %>% 
+  
+  rename(myDate            = julian_date,
+         project_id        = id,
+         concentration_bal = calc_conc_balance_plus_term_fee) %>%
+  
+  filter(myDate %within% iQtr1 | myDate %within% iQtr2 | myDate %within% iQtr3) %>% 
+  mutate(myYQ = as.yearqtr(myDate)) %>% 
+  mutate(concentration_bal = -concentration_bal) %>% 
+  
+  mutate(myYQname = case_when(myDate %within% iQtr1 ~ "cb_Qtr1",
+                              myDate %within% iQtr2 ~ "cb_Qtr2",
+                              myDate %within% iQtr3 ~ "cb_Qtr3",
+                              TRUE ~"UNKNOWN")) %>% 
+  
+  select(-c(name, myDate, myYQ)) %>% 
+  pivot_wider(values_from = concentration_bal, names_from = myYQname, values_fill = 0) %>% 
+  
+  {print(str(.)); .} %>%
+  
+  mutate(cb_Qtr1 = replace_na(cb_Qtr1,0)) %>% 
+  mutate(cb_Qtr2 = replace_na(cb_Qtr2,0)) %>% 
+  mutate(cb_Qtr3 = replace_na(cb_Qtr3,0))
+
+```
+
+## Join dfConcentrate & dfProject
+
+```{r label="Join-dfConcentrate-to-dfProject"}
+
+dfProject <- left_join (x = dfProject, y = dfConcentrate, 
+                         by = c("project_id"),  
+                         copy = FALSE, 
+                         suffix = c(".X", ".Y"), 
+                         keep = FALSE) 
+```
+
+## Control totals
+
+These should be the same as above, adding in the concentration balances  
+* Note: the "Totals" line is being generated by the adorn_totals() function   
+
+```{r label="ControlTotals-dfProject"}
+
+dfProjectCT1 <- dfProject %>%
+  group_by(fundid) %>%
+  summarise(tot_lots = sum(num_lots), 
+            project_count = n(),
+            tot_cbQ1 = sum(cb_Qtr1),
+            tot_cbQ2 = sum(cb_Qtr2),
+            tot_cbQ3 = sum(cb_Qtr3)) %>% 
+  janitor::adorn_totals()
+  flextable(dfProjectCT1) %>% 
+            set_header_labels(
+            fundid = "Fund ID",
+            tot_lots = "Total Lots", 
+            project_count = "# of Projects",
+            tot_cbQ1 = "Qtr1 CB",
+            tot_cbQ2 = "Qtr2 CB",
+            tot_cbQ3 = "Qtr3 CB") %>% 
+            add_footer_lines("iREF_Concentrate Control Totals") %>% 
+            fontsize(part="footer", size=10) %>% 
+            theme_vanilla() %>%
+            autofit()
+
+dfProjectCT1 <- dfProject %>%
+  group_by(fundid, builder_3letter) %>%
+  summarise(tot_lots = sum(num_lots), 
+            project_count = n(),
+            tot_cbQ1 = sum(cb_Qtr1),
+            tot_cbQ2 = sum(cb_Qtr2),
+            tot_cbQ3 = sum(cb_Qtr3)) %>% 
+  janitor::adorn_totals()
+  flextable(dfProjectCT1) %>% 
+            set_header_labels(
+            fundid = "Fund ID",
+            builder_3letter = "Builder ID",
+            tot_lots = "Total Lots", 
+            project_count = "# of Projects",
+            tot_cbQ1 = "Qtr1 CB",
+            tot_cbQ2 = "Qtr2 CB",
+            tot_cbQ3 = "Qtr3 CB") %>% 
+            add_footer_lines("iREF_Concentrate Control Totals") %>% 
+            fontsize(part="footer", size=10) %>% 
+            theme_vanilla() %>%
+            autofit()
+  
+```
+
+## List of Global Variables
+
+```{r}
+
+rm(REF_Concentrate, dfConcentrate, dfProjectCT1)
+ls(sorted=TRUE)
+
+```
+
+# Process: iREF_Summary 
+
+iREF_Summary is also sourced from the Reforecast System; however, it comes from a different table than iREF_Project.  Thus, we import this file, clean it up and join it into the final dataframe.  
+
+The iREF_Summary file has two entries for each project - one entry has a "type" equal to "P" (Proforma) and the other record has a "type" equal to "A" (Actual / Reforecast).  We want to have all of this financial information in a single entry in the dataframe to make reporting and charting easier.  
+
+So, we:  
+
+* Create two dataframes for each "type" and preface each field name with .P or .A 
+* Then join the two dataframes - combining the columns - to create one dataframe with all of the fields included
+* Then joining this dataframe into the final dataframe  
+
+## Import CSV File                
+
+```{r label="Import-REF-Summary"}
+
+REF_Summary <- read_csv(file=iREF_Summary,
+                        show_col_types = FALSE,    # show how types were assigned
+                        col_names = TRUE,          # first row is col headings
+                        skip_empty_rows = TRUE,    # skip rows that are all empty
+                        name_repair = "unique")    # make sure col names are unique
+
+```
+
+## DataFrame CleanUp
+
+* standardize column name syntax  
+* remove columns that are not needed  
+
+```{r label="CleanUp-REF-Summary"}
+
+dfxSummary <- REF_Summary %>%
+              
+              janitor::clean_names() %>% 
+              
+              select(c(project_id,  
+                        type,
+                        land,
+                        site,
+                        mud,
+                        project_costs,
+                        unleveraged,
+                        first_takedown_period,
+                        last_takedown_period,
+                        num_unpurchased,
+                        lots_in_final_tdown,
+                        hit_70))
+
+```
+
+## Create new Dataframes
+
+* Create a Profroma Table (SummaryP) and an Actuals Table (SummaryF)  
+* Then join these two tables so all columns are in one "row" (dfxSummary)  
+
+```{r label="Join-SummaryP-SummaryF"}
+
+REF_SummaryP <- dfxSummary %>%
+                filter(type == "P")  # Get only Proforma Rows
+
+REF_SummaryF <- dfxSummary %>%  
+              filter(type == "F")    # Get only Forecast Rows
+
+dfSummary <- inner_join (x = REF_SummaryP, y = REF_SummaryF, 
+             by = c("project_id"), 
+             copy = FALSE,  
+             suffix = c(".P", ".A"),  # append so we know Proforma & Actuals
+             keep = FALSE)   
+
+```
+
+# Create dfProjAll
+
+dfProjAll is the Key dataframe from this process.  It contains all of the data needed to create the Origination and Active Asset charts.  
+
+The process to create dfProjAll is as follows:
+
+* Join dfProject and dfSummary 
+* Create all the Factors as well as define factor breaks  
+
+>  
+> If factor breaks need to be adjusted - here is where you do it!
+>  
+
+```{r label="Create-ProjAll"}
+
+# Join REF dframes into dfProjAll and prepare for Charting    
+dfProjAll <- inner_join (x = dfProject, y = dfSummary, 
+                         by = c("project_id"),  
+                         copy = FALSE,  
+                         suffix = c(".1", ".2"),  
+                         keep = FALSE) %>%      
+  
+  # Convert the start date to a "date type" so it can be formatted for factoring
+  mutate(OrigQtr           = as.yearqtr(d_term_start), .after = d_term_start) %>% 
+  mutate(f_OrigQtr         = factor(as.yearqtr(d_term_start)), .after = proj_name) %>% 
+  mutate(OrigMth           = as.yearmon(d_term_start), .after = d_term_start) %>% 
+  mutate(f_OrigMth         = factor(as.yearmon(d_term_start)), .after = proj_name) %>% 
+ 
+  # the levels= puts the factor into a specific order when sorting
+  mutate(f_builder_3letter = factor(builder_3letter, 
+                                    levels=wBuilderOrder), .after = proj_name) %>% 
+  
+  mutate(f_state           = factor(state), .after = proj_name) %>% 
+  
+  mutate(f_msa             = factor(msa), .after = proj_name) %>%   
+
+  mutate(f_optterm         = cut(opt_term,breaks = c(0,18,24,36,Inf),           
+                                 labels=c("< = 18", "19-24","25-36","> 36"),   
+                                 right=TRUE),                                   
+                                 .after = proj_name) %>%    
+  
+  mutate(f_ProjLots        =cut(num_lots,breaks = c(0,100,150,300,450,600,Inf),
+                                labels=c("< = 100", "101-150", "151-300", "301-450",
+                                         "451-600", "> 600"),
+                                right=TRUE),
+                                .after = num_lots) %>% 
+  
+  mutate(f_UnpurLots        =cut(num_unpurchased.A,breaks = c(0,100,150,300,450,600,Inf),
+                                labels=c("< = 100", "101-150", "151-300", "301-450", 
+                                         "451-600", "> 600"),
+                                right=TRUE),
+                                .after = num_lots) %>% 
+   
+  mutate(f_1st_takedown.P  = cut(first_takedown_period.P,
+                                  breaks = c(0,6,9,12,15,18,Inf),                
+                                  labels=c("<=6","7-9","10-12","13-15",
+                                           "16-18",">18"),  
+                                  right=TRUE),                                            
+                                 .after = proj_name) %>%   
+  
+  mutate(f_hb_margin       = cut(hb_margin_percent,  
+                                 breaks = c(0,20,22,24,26,30,Inf),                                
+                                 labels=c("<=20.%","20.1%-22.0%","22.1%-24.0%",
+                                          "24.1%-26.0%",
+                                          "26.1%-30%",">30.0%"),  
+                                 right=TRUE),                                      
+                                 .after = proj_name) %>% 
+  
+  mutate(lb_margin_pct.P   = (unleveraged.P / (project_costs.P * -1)) * 100) %>% 
+  mutate(lb_margin_pct.A   = (unleveraged.A / (project_costs.A * -1)) * 100) %>% 
+  
+  mutate(project_costs.P = -round(project_costs.P/1000, digits=0)) %>% 
+  mutate(project_costs.A = -round(project_costs.A/1000, digits=0)) %>% 
+  
+  mutate(land.P = -round(land.P/1000, digits=0)) %>% 
+  mutate(land.A = -round(land.A/1000, digits=0)) %>% 
+  
+  mutate(site.P = -round(site.P/1000, digits=0)) %>% 
+  mutate(site.A = -round(site.A/1000, digits=0)) %>% 
+  
+  mutate(mud.P = -round(mud.P/1000, digits=0)) %>% 
+  mutate(mud.A = -round(mud.A/1000, digits=0)) %>%
+  
+  mutate(unleveraged.P = round(unleveraged.P/1000, digits=0)) %>% 
+  mutate(unleveraged.A = round(unleveraged.A/1000, digits=0)) %>% 
+  
+  mutate(cb_Qtr1         = round(cb_Qtr1/1000, digits=0)) %>% 
+  mutate(cb_Qtr2         = round(cb_Qtr2/1000, digits=0)) %>% 
+  mutate(cb_Qtr3         = round(cb_Qtr3/1000, digits=0)) %>% 
+  
+  mutate(f_lb_margin.P     = cut(lb_margin_pct.P,
+                                 breaks = c(0,5,8,10,Inf),                
+                                 labels=c("<=5.0%", "5.1%-8.0%","8.1%-10.0%",">10.0%"),  
+                                 right=TRUE),                                      
+                                 .after = proj_name) %>% 
+  
+  mutate(f_lb_margin.A     = cut(lb_margin_pct.A,
+                                 breaks = c(0,5,8,10,Inf),                
+                                 labels=c("<=5.0%", "5.1%-8.0%","8.1%-10.0%",">10.0%"), 
+                                 right=TRUE),                                      
+                                 .after = proj_name) %>%
+    
+  mutate(f_ASP             = cut(wavg_asp, 
+                                 breaks = c(0,300000,450000,600000,750000,Inf),                                
+                                 labels=c("<=$300k","$300k-$450k","$450k-$600k",
+                                             "$600k-$750k",">$750k"),  
+                                 right=TRUE),                                      
+                                 .after = proj_name) %>% 
+  
+  mutate(w_recordcount     = 1) %>%      
+
+  mutate(f_fundid          = factor(fundid), .after = proj_name) %>% 
+  
+  mutate(f_hit_70.P        = cut(hit_70.P,
+                                 breaks = c(0,12,18,24,30,36,Inf),                
+                                 labels=c("<=12", "13-18","19-24","25-30",
+                                          "31-36",">36"),  
+                                 right=TRUE),                                             
+                                 .after = proj_name) %>% 
+  
+  mutate(f_hit_70.A        = cut(hit_70.A,
+                                 breaks = c(0,12,18,24,30,36,Inf),                
+                                 labels=c("<=12", "13-18","19-24","25-30",
+                                          "31-36",">36"),  
+                                 right=TRUE),                                             
+                                 .after = proj_name) %>% 
+
+  mutate(remain_term       = opt_term - actuals_thru_period) %>% 
+  
+  mutate(f_remain_term     = cut(opt_term - actuals_thru_period, 
+                                 breaks = c(0,12,18,24,36,Inf),                
+                                 labels=c("<=12", "13-18","19-24","25-36",">36"),  
+                                 right=TRUE),                                  
+                                .after = proj_name) %>%  
+
+  mutate(f_bookstatus      = factor(book_status), .after = proj_name) %>% 
+  
+  mutate(msa_tier          = case_when(
+                                       str_detect(msa, ": Core") ~ "Core",
+                                       str_detect(msa, ": T1") ~ "T1",
+                                       str_detect(msa, ": T2") ~ "T2",
+                                       str_detect(msa, ": T3") ~ "T3",
+                                       TRUE ~ "XX" ), .after = msa) %>% 
+  
+  mutate(f_msa_tier        = factor(msa_tier), .after = proj_name) %>% 
+
+  mutate(closed            = ifelse(num_unpurchased.A == 0,"Closed","Active"))
+
+```
+
+## dfProjAll Control totals
+
+* Note: the "Totals" line is being generated by the adorn_totals() function  
+
+```{r label="Final-Control-Totals"}
+
+dfProjectCT1 <- dfProjAll %>%
+  group_by(fundid) %>%
+  summarise(tot_lots = sum(num_lots), 
+            project_count = n(),
+            tot_cbQ1 = sum(cb_Qtr1),
+            tot_cbQ2 = sum(cb_Qtr2),
+            tot_cbQ3 = sum(cb_Qtr3)) %>% 
+  janitor::adorn_totals()
+  flextable(dfProjectCT1) %>% 
+            set_header_labels(
+            fundid = "Fund ID",
+            tot_lots = "Total Lots", 
+            project_count = "# of Projects",
+            tot_cbQ1 = "Qtr1 CB",
+            tot_cbQ2 = "Qtr2 CB",
+            tot_cbQ3 = "Qtr3 CB") %>% 
+            add_footer_lines("dfProjAll Control Totals") %>% 
+            fontsize(part="footer", size=10) %>% 
+            theme_vanilla() %>%
+            autofit()
+
+dfProjectCT1 <- dfProjAll %>%
+  group_by(fundid, builder_3letter) %>%
+  summarise(tot_lots = sum(num_lots), 
+            project_count = n(),
+            tot_cbQ1 = sum(cb_Qtr1),
+            tot_cbQ2 = sum(cb_Qtr2),
+            tot_cbQ3 = sum(cb_Qtr3)) %>% 
+  janitor::adorn_totals()
+  flextable(dfProjectCT1) %>% 
+            set_header_labels(
+            fundid = "Fund ID",
+            builder_3letter = "Builder ID",
+            tot_lots = "Total Lots", 
+            project_count = "# of Projects",
+            tot_cbQ1 = "Qtr1 CB",
+            tot_cbQ2 = "Qtr2 CB",
+            tot_cbQ3 = "Qtr3 CB") %>% 
+            add_footer_lines("dfProjAll Control Totals") %>% 
+            fontsize(part="footer", size=10) %>% 
+            theme_vanilla() %>%
+            autofit()
+  
+```
+
+## List of Global Variables
+
+```{r}
+
+rm(dfxSummary, REF_Summary, REF_SummaryP, REF_SummaryF, dfProject, dfProjectCT1)
+ls(sorted=TRUE)
+
+```
+
+## Strucute of dfProjAll
+
+Notes:
+
+* All Date Fields start with d_  
+* All Factor Fields start with f_  
+
+```{r}
+str(dfProjAll)
+```
+
+# Create dfFundTotals
+
+The purpose of this step is to create the Summary Data Frame that will be used in Summary Calculations and can be used to confirm various control totals by Fund, by Builder.
+
+## Calculate the Summary Totals
+
+```{r}
+dfFundTotals <- dfProjAll %>%
+  group_by(fundid, builder_3letter) %>%
+  summarise(
+            
+            CountOrig    = sum(w_recordcount),
+            CountClosed  = sum(ifelse(closed != "Active", w_recordcount, 0)),
+            CountActive  = sum(ifelse(closed == "Active", w_recordcount, 0)),
+            
+            LotsOrig         = sum(num_lots),
+            LotsConveyClosed = sum(ifelse(closed != "Active", num_lots, 0)),
+            LotsConveyActive = sum(ifelse(closed == "Active", (num_lots - num_unpurchased.A), 0)),
+            LotsActive       = sum(ifelse(closed == "Active", num_unpurchased.A, 0)),
+
+            LandOrig          = sum(land.P),
+            ContractSumOrig   = sum(project_costs.P - land.P),
+            LBMargin_Orig     = sum(unleveraged.P),
+            LBRev_Orig        = sum(project_costs.P + unleveraged.P),
+                        
+            CostOrig   = sum(project_costs.P),
+            CostClosed = sum(ifelse(closed != "Active", project_costs.P, 0)),
+            CostActive = sum(ifelse(closed == "Active", project_costs.P, 0)),
+
+            ConBalActive = sum(ifelse(closed == "Active", cb_Qtr1, 0)),
+            
+            .groups="drop")
+```
+
+## dfFundTotals Control totals (EHF1)
+
+```{r}
+
+dfEHF1Totals <- dfFundTotals %>% 
+  subset(fundid == "EHF1")
+
+flextable(data = dfEHF1Totals,
+          col_keys = c("fundid", "builder_3letter", "CountOrig","CountClosed", "CountActive")) %>% 
+          theme_vanilla() %>%         
+          autofit()
+
+flextable(data = dfEHF1Totals,
+          col_keys = c("fundid", "builder_3letter", "LotsOrig","LotsConveyClosed", "LotsConveyActive", "LotsActive")) %>% 
+          theme_vanilla() %>%         
+          autofit()
+
+flextable(data = dfEHF1Totals,
+          col_keys = c("fundid", "builder_3letter", "CostOrig","CostClosed", "CostActive", "ConBalActive")) %>% 
+          theme_vanilla() %>%         
+          autofit()
+
+```
+
+## dfFundTotals Control totals (EHF2)
+
+```{r}
+
+dfEHF2Totals <- dfFundTotals %>% 
+  subset(fundid == "EHF2") %>% 
+  janitor::adorn_totals(name="Total") # this will end up in the fundid column
+  dfEHF2Totals$builder_3letter[nrow(dfEHF2Totals)]="Totals" # this puts it in the builder_3letter column
+
+flextable(data = dfEHF2Totals,
+          col_keys = c("fundid", "builder_3letter", "CountOrig","CountClosed", "CountActive")) %>% 
+          theme_vanilla() %>%         
+          autofit()
+
+flextable(data = dfEHF2Totals,
+          col_keys = c("fundid", "builder_3letter", "LotsOrig","LotsConveyClosed", "LotsConveyActive", "LotsActive")) %>% 
+          theme_vanilla() %>%         
+          autofit()
+
+flextable(data = dfEHF2Totals,
+          col_keys = c("fundid", "builder_3letter", "CostOrig","CostClosed", "CostActive", "ConBalActive")) %>% 
+          theme_vanilla() %>%         
+          autofit()
+
+```
+
+## List of Global Variables
+
+```{r}
+
+rm(dfFundTotals)
+ls(sorted=TRUE)
+
+```
+
+## Structure of dfEHFXTotals
+
+```{r}
+str(dfEHF1Totals)
+```
+
+# Create dfChart1Data
+
+The purpose of this step is to create the Charting DataFrame that will be used to Chart Origination and Active Asset information.  Future Supplemental charting or table information could be included in this section.
+
+There is one charting file - **dfChart1Data** - that contains the information required for the Origination and Active Asset Charts.  
+
+## Organize the base data we need
+
+*  Selecting the columns from dfProjAll needed to create the Origination and Active Asset graphs
+*  All of the factor fields are selected (those that start with f_).  
+  * Note: the "F Lots" Proforma Average Selling Price ("f_lots_asp") also starts with f_ and we do not want that field included, so it is deleted in the last step, below
+  
+```{r}
+
+dfChart1Data <- dfProjAll %>% 
+  select(c(fundid,
+           project_id,
+           builder_3letter,
+           proj_name,
+           city,
+           state,
+           msa,
+           msa_tier,
+           OrigMth,
+           OrigQtr,
+           project_costs.P,
+           w_recordcount,
+           num_lots,
+           num_unpurchased.A,
+           cb_Qtr1,
+           cb_Qtr2,
+           cb_Qtr3,
+           closed,
+           starts_with("f_"))) %>%          
+           select(-c(f_lots_asp))                   
+```
+
+## List of Global Variables
+
+This is included to confirm all temporary variables have been removed 
+
+```{r}
+
+ls(sorted=TRUE)
+
+```
+
+## Structure of dfEHFXTotals
+
+```{r}
+str(dfChart1Data)
+```
+
+# Save xlsx and rda Files
+
+## Excel Workbook
+
+* Save dfProjAll, dfEHF1Totals, dfEHF2Totals and dfChart1Data to an Excel Workbook 
+  * Dataframes are on separate sheets using the dataframe name as the sheet name
+  * Dataframe column names are in the Excel Header row
+
+```{r}
+
+wb <- createWorkbook()
+
+addWorksheet(wb=wb,
+             sheetName="dfProjAll")
+
+addWorksheet(wb=wb,
+             sheetName="dfChart1Data")
+
+addWorksheet(wb=wb,
+             sheetName="dfEHF1Totals")
+
+addWorksheet(wb=wb,
+             sheetName="dfEHF2Totals")
+
+writeDataTable(wb=wb,
+          sheet="dfProjAll", 
+          x=dfProjAll, 
+          startCol = "A", startRow = 3,
+          tableStyle = openxlsx_setOp("tableStyle", "TableStyleMedium2"),
+          colNames = TRUE,
+          )
+
+writeDataTable(wb=wb,
+          sheet="dfChart1Data", 
+          x=dfChart1Data, 
+          startCol = "A", startRow = 3,
+          tableStyle = openxlsx_setOp("tableStyle", "TableStyleMedium2"),
+          colNames = TRUE,
+          )
+
+writeDataTable(wb=wb,
+          sheet="dfEHF1Totals", 
+          x=dfEHF1Totals, 
+          startCol = "A", startRow = 3,
+          tableStyle = openxlsx_setOp("tableStyle", "TableStyleMedium2"),
+          colNames = TRUE,
+          )
+
+writeDataTable(wb=wb,
+          sheet="dfEHF2Totals", 
+          x=dfEHF2Totals, 
+          startCol = "A", startRow = 3,
+          tableStyle = openxlsx_setOp("tableStyle", "TableStyleMedium2"),
+          colNames = TRUE,
+          )
+
+setColWidths(
+  wb=wb,
+  sheet="dfProjAll",
+  cols = 1:ncol(dfProjAll),
+  widths = "auto")
+
+setColWidths(
+  wb=wb,
+  sheet="dfChart1Data",
+  cols = 1:ncol(dfChart1Data),
+  widths = "auto")
+
+setColWidths(
+  wb=wb,
+  sheet="dfEHF1Totals",
+  cols = 1:ncol(dfEHF1Totals),
+  widths = "auto")
+
+setColWidths(
+  wb=wb,
+  sheet="dfEHF2Totals",
+  cols = 1:ncol(dfEHF2Totals),
+  widths = "auto")
+
+saveWorkbook(wb=wb,
+             file=oxl_ProjAll,
+             overwrite = TRUE)
+```
+
+## RDA File
+
+* **RDA** is short for R Data File    
+* Multiple R objects can be stored in an RDA file 
+* When the **RDA** file is "loaded" in an R Project, the file names will be restored as well.  
+  * So, no need to save each R object - just a single **RDA** file 
+
+```{r}
+
+save(dfProjAll, dfEHF1Totals, dfEHF2Totals, dfChart1Data, file=odf_ProjAll)
+
+```
+
+## Create the Portfolio Packages
+
+```{r}
+
+rmarkdown::render(input = iht_Package,
+                  params = (list(pFundID = "EHF2", pQtrEnd="December 31, 2023")),
+                  output_file=oht_EHF2)
+
+```
+

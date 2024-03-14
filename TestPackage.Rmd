@@ -1,0 +1,259 @@
+---
+title: "Portfolio Analysis" 
+author: "`r paste0('for ', params$pFundID, ' as of ')`"
+date: "`r params$pQtrEnd`"
+output:
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+params:
+  pFundID: "EHF1"
+  pQtrEnd: "December 31, 2022"
+---
+
+```{r label="setup", echo=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE, error=FALSE, warning=TRUE)
+options(dplyr.summarise.inform = FALSE)
+
+```
+
+
+```{r label="library-definitions", echo=FALSE}
+
+# R Package Definitions                                       
+library(tidyverse)
+library(lubridate)
+library(tidyquant)  
+library(dplyr)
+library(scales)
+library(forcats)
+library(openxlsx)
+library(flextable)
+library(echarts4r)
+library(flextable)
+
+# set the working directory for the input / output files
+myDirectory <- "~/Dropbox/UC-Unclutter/AA My R Stuff/RPortfolio"
+setwd(myDirectory)
+
+# load the input file that was created by Portfolio Analysis
+# Note: this is an rda file that contains several file including:
+#  dfProjAll        - the full dataframe of all project information
+#  dfChart1Data     - the dataframe used in this RMarkdown Analysis
+#  dfEHF1Totals     - Stats for EHF1
+#  dfEHF2Totals     - Stats for EHF2
+idf_ProjAll <- paste0(myDirectory,"/03 df Files/dfProjAll.rda")
+load(idf_ProjAll)
+
+# This will load dfChart1Data that has all the project information
+#   we will subset this to the corrent fund and exclude Closed Projects
+
+# Thus, dfChart1Data  has ALL Project Data
+#       dfChart1DataA has only Active Project Data
+
+dfChart1Data <- subset(dfChart1Data, fundid == params$pFundID)
+dfChart1Data <- droplevels(dfChart1Data)
+
+dfChart1DataA <- subset(dfChart1Data, closed == "Active")
+dfChart1DataA <- droplevels(dfChart1DataA)
+
+# The Summary page will use the EHFX dataframe ...
+if(params$pFundID == "EHF2")
+  {dfEHFXTotals <- dfEHF2Totals} else {dfEHFXTotals <- dfEHF1Totals}
+
+```
+
+
+```{r label="f01_CreateChart", echo=FALSE}
+
+# The Charting Function for Origination Charts (Line Charts)
+
+f01_CreateChart <- function(dfdata,        # dataframe FROM f01_CreateChartData
+                            ctitle,        # Chart Title
+                            csubtext,      # Chart Subtitle
+                            cflip=NULL,    # Fip the X & Y before charting
+                            cCuml=NULL)    # Plot the Cumulative Balance
+{ #Start of function
+  
+  # If the optional parameters were not provided, force them to FALSE
+  if(is.null(cflip)) {cflip <- FALSE}
+  if(is.null(cCuml)) {cCuml <- FALSE}
+  
+  # The "Chart_Total" column is 
+  mySeries <- "Chart_Total"
+  if(cCuml == TRUE) {mySeries <- "Chart_Cum"}
+  
+  theChart <- dfdata %>% 
+  e_charts(x=Chart_X) %>% 
+  e_title(text=ctitle,
+          textStyle = list(fontSize=16),
+          subtext=csubtext) %>% 
+  e_line_(serie=mySeries) %>% 
+ 
+  e_grid(right="15%") %>% 
+  e_legend(orient="vertical",right="10", top="15%") %>% 
+  e_tooltip(trigger="axis") %>% 
+  e_toolbox_feature("saveAsImage")
+  
+  if(params$pFundID == "EHF2")
+      {  
+        theChart <- theChart %>% 
+           e_legend(selector = list (
+             list(type="inverse", title="Flip"),
+             list(type="all", title="All")))
+      }
+  
+  if(cflip == TRUE) {theChart <- theChart %>% e_flip_coords()}
+  
+  return(theChart) 
+  
+} # end of Function
+
+```
+
+```{r label="f02_CreateChart", echo=FALSE}
+
+# The Charting Function for Active Assets (Bar Charts)
+
+f02_CreateChart <- function(dfdata,        # dataframe FROM f01_CreateChartData
+                            ctitle,        # Chart Title
+                            csubtext,      # Chart Subtitle
+                            cflip=NULL,    # Fip the X & Y before charting
+                            cCuml=NULL)    # Plot the Cumulative Balance
+{ #Start of function
+  
+  # If the optional parameters were not provided, force them to FALSE
+  if(is.null(cflip)) {cflip <- FALSE}
+  if(is.null(cCuml)) {cCuml <- FALSE}
+  
+  # The "Chart_Total" column is 
+  mySeries <- "Chart_Total"
+  if(cCuml == TRUE) {mySeries <- "Chart_Cum"}
+  
+  theChart <- dfdata %>% 
+  e_charts(x=Chart_X) %>% 
+  e_title(text=ctitle,
+          textStyle = list(fontSize=16),
+          subtext=csubtext) %>% 
+  e_bar_(serie=mySeries,
+         itemStyle = list(borderColor = "black", borderWidth = "1")) %>% 
+  e_grid(right="15%") %>% 
+  e_legend(orient="vertical",right="10", top="15%") %>% 
+  e_tooltip(trigger="axis") %>% 
+  e_toolbox_feature("saveAsImage")
+  
+  if(params$pFundID == "EHF2")
+      {  
+        theChart <- theChart %>% 
+           e_legend(selector = list (
+             list(type="inverse", title="Flip"),
+             list(type="all", title="All")))
+      }
+   
+  if(cflip == TRUE) {theChart <- theChart %>% e_flip_coords()}
+  
+  return(theChart) 
+  
+} # end of Function
+```
+
+```{r label="f01_CreateChartData", echo=FALSE}
+
+f01_CreateChartData <- function (dfC1D,      # the dfChart1Data
+                                 cX_Category,
+                                 cY_Series,
+                                 cActiveOnly)
+{ # Start the Function
+  
+  # Later on, we will need to access the actual dataname referred to by these parameters
+  cX_dataname  <- as.name(cX_Category)
+  cY_dataname  <- as.name(cY_Series)
+  
+  # Select only Active Projects if ActiveOnly == TRUE
+  dfC1Dx <- dfC1D
+  if(cActiveOnly == TRUE) {dfC1Dx <- dfC1D %>% filter(closed == "Active")}
+
+  # Drop any unused levels from dataframe factors
+  dfSubtotals <- dfC1Dx %>% droplevels()
+    
+  # We create a dataframe with all the data for all builders
+  # This will be used to plot the "Totals" line on our graphs
+  # Yes - we are duplicating all of the data to do this!
+  
+  # create a new column called "chart_amount" duplicating the cY_series value
+  # group the dataframe by the cX_Category
+  # summarize and create a new dataframe with a new Chart_Total column
+  #       -- this new column will be charted later on
+  # then add in some cumulative totals for used in "cumulative" charts
+  # then overwrite EVERY record with Total in the builder_3letter column
+  dfSubtotals <- dfSubtotals %>% 
+    mutate(chart_amount = {{cY_dataname}}, .before=project_id) %>% 
+    group_by({{cX_dataname}}, .drop=FALSE)  %>% 
+    summarize(Chart_Total = sum(chart_amount)) %>% 
+    mutate(Chart_Cum   = cumsum(Chart_Total)) %>% 
+    mutate(builder_3letter = "Total", .before={{cX_dataname}})
+  
+  # Now we will create a dataframe with the builder information
+  # Notice we start with dfC1Dx which has been filterd for the relevant fund
+  
+  dfdata <- dfC1Dx %>% 
+    filter(fundid == params$pFundID)
+  
+  #Drop the levels (as above)
+  dfdata <- dfdata %>% droplevels()
+  
+  # This time group by builder_3letter AND the cX_Category
+  # Note this dataframe has the identical column names as above
+  #      --- that is IMPORTANT, I'll explain below
+  dfdata <- dfdata %>% 
+    mutate(chart_amount = {{cY_dataname}}, .before=project_id) %>% 
+    group_by(builder_3letter, {{cX_dataname}})  %>%
+    summarize(Chart_Total = sum(chart_amount), .drop=FALSE) %>% 
+    mutate(Chart_Cum = cumsum(Chart_Total))
+  
+  # So now we are going to combine dfSubTotals and dfdata
+  # This will give us the builder totals plus a "builder" called "Total"
+  # In order to rbind these two dataframes, the layouts must be identical
+  # Note: EHF1 only has LEN, so we don't need Totals
+  if(params$pFundID == "EHF2") {dfdata <- rbind(dfdata,dfSubtotals)}
+  dfdata <- rename(dfdata, Chart_X = {{cX_dataname}})
+  dfdata <- arrange(dfdata,Chart_X)  
+  
+  # And now send the data back to be plotted
+  return(dfdata)
+  
+} # end of Function
+```
+# Create a tooltip text for each Builder 
+```{r echo=FALSE}
+
+tooltip_text <- mapply(function(builder,projects) {
+  paste("Builder:", builder, "<br>", 
+        "Projects:", paste(projects, collapse = ", "))
+}, dfChart1data$buildeeer_3letter, dfChart1data$Projects, SIMPLIFY = FALSE)
+```
+# Highlights {data-navmenu="Summary"}
+
+## Column <!-- Column 1 -->
+
+### <!-- Table: Number of Investments -->
+
+```{r echo=FALSE}
+
+flextable(data = dfEHFXTotals,
+          col_keys = c("builder_3letter", "CountOrig","CountClosed", "CountActive")) %>% 
+          add_header_row(top=TRUE, values="Origination Summary (Number of Investments)",colwidths=4) %>%         
+          set_header_labels(
+              builder_3letter = "Builder", 
+              CountOrig       = "Originations", 
+              CountClosed     = "Closed", 
+              CountActive     = "Active") %>% 
+          theme_vanilla() %>%         
+          autofit()
+          compose(j = "builder_3letter", value = as_paragraph(tooltip_text) %>%
+                    as_html(), .after = TRUE) %>%
+
+```
+
+

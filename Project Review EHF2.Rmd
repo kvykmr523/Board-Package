@@ -1,0 +1,1541 @@
+---
+title: "Project Summaries"
+author: ''
+date: "`r Sys.Date()`"
+header-includes:
+  - \usepackage{fancyhdr}
+  - \pagestyle{fancy}
+  - \fancyhead[LO,LE]{EHF Project Updates}
+  - \fancyhead[RO,RE]{Confidential}
+  - \fancyfoot[CO,CE]{For Internal Use Only}
+  - \fancyfoot[RE,RO]{\thepage}
+  - \usepackage[T1]{fontenc}
+geometry: "left=2cm,right=2cm,top=3cm,bottom=2cm"
+fontsize: 12
+output:
+  pdf_document:
+    toc: yes
+    number_sections: true
+    df_print: kable
+    latex_engine: xelatex
+  html_document:
+    toc: yes
+    toc_float: no
+    number_sections: yes
+    theme: simplex
+  word_document:
+    toc: yes
+    number_sections: true
+    df_print: kable
+---
+
+```{=html}
+<style type="text/css">
+ body { 
+   font-family: "Source Sans Pro", sans-serif; 
+   font-size: 14px;
+ }
+ h1.title {
+   font-size: 20px;
+ }
+ td {  /* Table  */
+   font-size: 14px;
+ }
+ h1 { /* Header 1 */
+   font-size: 14px;
+   font-weight: bold; 
+   
+ }
+ h2 { /* Header 2 */
+   font-size: 14px;
+   font-weight: bold; 
+ }
+ h3 { /* Header 3 */
+   font-size: 16px;
+   font-weight: bold; 
+ }
+ blockquote { /* BlockQuote */
+   font-size: 14px;
+   color: DarkBlue;
+ </style>
+```
+```{=html}
+<style type="text/css">
+.main-container { /* dynamically fill window */
+  max-width: 100% !important;
+  margin: auto;
+}
+</style>
+```
+```{r include=FALSE, label="setup"}
+
+# If you want to flip the report to landscape, insert this before geometry in YAML Header
+# classoption: landscape
+
+# R Package Definitions                                       
+library(tidyverse)
+library(lubridate)
+library(tidyquant)  
+library(dplyr)
+library(scales)
+library(forcats)
+library(ggrepel)
+library(openxlsx)
+library(flextable)
+library(tinytex)
+library(knitr)
+library(kableExtra)
+library(rmarkdown)
+
+# knitr global options
+knitr::opts_chunk$set(echo = FALSE, error=FALSE)
+options(dplyr.summarise.inform = FALSE)
+
+```
+
+```{r include=FALSE, label="setup-input-filenames"}
+
+rm(list = ls())
+
+# Project Directory
+myDirectory <- "~/Dropbox/Board Package Material - Shared/CC R Portfolio"
+
+# The Project Files
+idf_ProjAll      <- paste0(myDirectory,"/03 df Files/dfProjAll.rda")
+
+# Load dfProjAll
+load(idf_ProjAll)
+
+```
+
+```{r GetProjectDetails, echo=FALSE}
+
+f01_GetProjectDetails <- function(project_lookup) {
+ 
+# retreive the Project   
+dfstart <- dfProjAll %>% subset(project_id == project_lookup)
+
+dftemp <- dfstart %>% 
+  select(c(Fund          = "fundid",
+           Builder       = "builder_3letter",
+           Project       = "proj_name",
+           Acquisition   = "book_status",
+           City          = "city",
+           State         = "state",
+           MSA           = "msa")) %>% 
+  as.list() %>% 
+  enframe(name="Name1", value="Value1") %>% 
+  rownames_to_column("Index")
+
+dftemp2 <- dfstart %>% 
+  mutate(project_costs.P = dollar(project_costs.P)) %>% 
+  mutate(hb_margin_percent = (hb_margin_percent)) %>% 
+  mutate(cb_Qtr1         = ifelse(is.na(cb_Qtr1),dollar(0),dollar(cb_Qtr1))) %>% 
+  select(c(NbrOfLots         = "num_lots",
+           NbrOfLotTypes     = "num_lot_types",
+           UnpurchasedLots   = "num_unpurchased.A",
+           FinalTDown        = "lots_in_final_tdown.A",
+           ProjectCost       = "project_costs.P",
+           Concentration     = "cb_Qtr1",
+           HB_Margin         = "hb_margin_percent")) %>% 
+  as.list() %>% 
+  enframe(name="Name2", value="Value2") %>% 
+  rownames_to_column("Index")
+
+dftemp3 <- dfstart %>% 
+  mutate(d_term_start        = format(d_term_start)) %>% 
+  mutate(d_term_end          = format(d_term_end)) %>% 
+  select(c(LB_COE            = "d_term_start",
+           Option_Term       = "opt_term",
+           RemainingMths     = "remain_term",
+           OptionEnds        = "d_term_end",
+           FirstTDownMth     = "first_takedown_period.P")) %>% 
+  as.list() %>% 
+  enframe(name="Name3", value="Value3") %>% 
+  rownames_to_column("Index")
+
+dfFinal <- merge(x=dftemp,y=dftemp2,by="Index",all=TRUE)
+dfFinal <- merge(x=dfFinal,y=dftemp3,by="Index",all=TRUE)
+dfFinal <- dfFinal %>% select(-c(Index))
+dfFinal[is.na(dfFinal)] <- " "
+
+# Now build and return the Presentation Table
+kbFinal <- knitr::kable(dfFinal, col.names = NULL, booktabs=T, linesep = "") %>%
+          kable_styling(full_width = T) %>%
+          column_spec(c(3,5), width = "2.5cm", color = "blue", bold = F) %>% 
+          column_spec(1, width = "1.5cm", color = "blue", bold = F)
+
+return(kbFinal)
+
+}
+
+```
+
+
+\pagebreak 
+
+# EHF2 Watchlist Project Updates 
+
+
+## **Aspire at Caliterra Ranch**\       
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 517)
+kbInfo
+
+```
+**Background**\  
+- This Project was entitled and developed in two phases (145 total lots; 1 product type)       
+- The Final Map records prior to substantial completion of the lots       
+- The Final Maps have been recorded prior to COE       
+- Phase 1 (55 lots):  The Lots are Substantially Complete (+/-8 months behind proforma and first takedown date)       
+- HOV reports the Phase 1 delays were due to extreme winter weather and obtaining electrical transformers       
+- The Community is open for sales (consistent with proforma and sales commencement date)       
+- The project was on the Watch List for substantial completion delays (Phase 1).  However, the Phase 1 lots are now complete       
+
+**Development**\       
+ - Phase 2 (90 lots):  A portion of Phase 2 lots are Substantially Complete and have homes being built.  The remainder of the lots in Phase 2 are expected to pave Dec2023 and be Substantially Complete and energized in Jan2024 (5 months behind proforma and first takedown date for those lots)        
+
+**Sales Performance**\       
+ - Builder achieved 85% proforma sales for the quarter.       
+ - Although the builder has been behind, overall sales performance is at an acceptable level of 15% below quarterly proforma, HOV has made pricing adjustments to move product and capture market share.       
+ - Now that backlog is cleared, builder price adjustments and incentives have resulted in an overall acceptable rate of 85% of sales proforma.       
+ - HOV adjusted pricing and incentives accordingly to achieve quarter sales of 11, which is a great improvement over two sales for the entire previous quarter.   
+ - Builder is offering a Builder Forward Commitment rate buy down for any home that can close in the month of June and July at a 5.25%       
+ - Builder believes they have made appropriate adjustments to find the market.       
+
+**Impact on Lot Takedowns**\       
+ - HOV has elected to place 12 lots on Hiatus for 1 month in November       
+
+\pagebreak 
+
+## **Ault Farms**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1177)
+kbInfo
+
+```
+**Background**\      
+ - The project was entitled and developed in two phases (200 total lots; 3 Lot Types)      
+ - The Final Map records upon Substantial Completion of the Lots      
+ - Phase 1a (166 lots):  The Final Map has recorded (prior to COE)      
+ - Phase 1b (34 lots):  The Final Map has recorded (prior to COE)      
+ - Phase 1a: The lots are substantially complete (prior to COE)      
+ - Phase 1b:  The lots are substantially complete (shortly after COE)      
+ - The Community is open for sales with completed models (consistent with proforma sales commencement date)      
+
+**Sales and Market**\      
+ - Builder is using discounts to move project.       
+ - Overall sales at proforma.      
+
+\pagebreak 
+
+## **Bella Vista Trails**\                       
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 731)
+kbInfo
+
+```
+**Background**\                   
+ - The project is being platted and developed in 2 phases (379 total lots; 3 product lines)                        
+ - The Plats are recorded before substantial completion of the Lots                  
+ - Phase 1: 166 lots (85 A lots, 59 B lots, 22 C lots):  The Final Plat is recorded (ahead of proforma and first takedown date)               
+ - Phase 2: 216 lots (112 A lots, 66 B lots, 35 C lots):  The Final Plat is recorded (ahead of proforma and first takedown date)         
+ - The project is on the Watch List for substantial completion and sales commencement delays          
+
+**Development**\         
+ - Phase 1 Lots are expected to be Substantially Complete in Dec2023 (6 months behind pro forma and first takedown date)           
+ - Phase 2 Lots are expected to be Substantially Complete in Feb2024 (2 months behind proforma and first takedown date for those lots)         
+ - These delays are due to agency delays (City/Utility Company) for the completion of offsite sewer work - including plan reviews and approvals         
+
+**Sales Commencement**\         
+ - The above schedule delays has impacted MTH's sales commencement date         
+ - Sales Opening date is now expected in Dec2023 (6 months behind proforma sales commencement date)         
+ - Models expected to open with the Grand Opening in Feb2024         
+
+**Next Steps**\           
+ - The Community is on the Watch List and will be monitored closely for substantial completion progress         
+
+\pagebreak 
+
+## **BMGC Founders**\               
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 526)
+kbInfo
+
+```
+**Background**\                
+ - The property is being entitled and developed in two phases (156 total lots; 2 product types)               
+ - Phase 1 (“A” = 42 &; "B" = 28 lots): The Phase 1 Final Plat is recorded  (ahead of proforma and first takedown date)        
+ - Phase 2 ("A" = 1 & "B" = 85 lots): The Phase 2 Final Map is recorded (ahead of proforma and first takedown date for those lots)                
+ - The Phase 1 Lots are Substantially Complete (+/-4 months behind proforma and first takedown date)                
+ - LEN reports that weather issues and needing to relocated guy wires (a neighbor complaint that had to be mitigated by NV Energy) has contributed to the development delays for the Phase 1 lots.  
+ - City Approval times also increased significantly        
+ - The Offsite and District Improvements are Substantially Complete (consistent with proforma and first takedown date)        
+ - The Community is open for sales (+/-6 months behind proforma sales commencement date)        
+ - Delays in opening for sale are attributed to the development as described below        
+ - The project has been on the Watch List for sales commencement delays        
+
+**Development**\        
+ - The Phase 2 Lots are expected to be Substantially Complete in Dec2023 (consistent with proforma and first takedown date for those lots)              
+
+**Sales and Market**\
+- Builder has adjusted pricing down, in addition to rate buy downs & incentives,  by 5% to move sales and rate buy-downs to target absorption of 3/month.      
+- Solid location within the Las Vegas MSA and team believes this community will performa in tandem/ or better than average to the market.      
+
+**Next Steps**\          
+ - The Community has been on the Watch List, however the project is now open for sales and back on track              
+ - Continue with routine Project Reviews              
+
+\pagebreak 
+
+## **Bridgewater PH 5-8**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 944)
+kbInfo
+
+```
+**Background**\      
+ -The Phase 8 Final Map is recorded and the lots are substantially complete      
+ - The Final Maps record after substantial completion of the lots      
+ - The Project is being entitled and developed in four phases:        
+    - Phase 5 (196 Lots): 100 C Lots and 96 D Lots      
+    - Phase 6 (245 Lots): 245 E Lots      
+    - Phase 7 (289 Lots): 189 A Lots in 7A and 100 B Lots in 7B      
+    - Phase 8 (231 Lots): 231 B Lots      
+ - All Final Maps are recorded and Lots Substantially Complete (consistent with proforma and first takedown dates) with the exception of Phase 8      
+ - The Community is open for sales consistent with proforma and sales commencement date      
+
+**Entitlement/Development**\      
+ - The Phase 8 Final Map is expected to record in Nov2023 (consistent with proforma and first takedown date for those lots)      
+ - Phase 8 Lots are expected to be Substantially Complete Dec2023       
+ - All Offsite improvements are substantially complete        
+
+**Sales and Market**\      
+ - Overall sale 45% of proforma for the Q.      
+ - Community located in high sales volume area.      
+ - Builder making sale incentive adjustments including rate buydowns.      
+ - Sales risk is low as Builder is established in the Master Plan (est. 2001) and product offering is one of the lowest price product in the MPC and submarket.      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Bronson Apopka**\     
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 520)
+kbInfo
+
+```
+**Background**\    
+ - The project is being entitled and developed in one phase (268 total lots; 3 product types)
+ - Final Plats record prior to Substantial Completion of the Lots
+ - The Final Plat is recorded (6 months behind proforma and first takedown date)
+ - LEN reports the delay was due to re-engineering of site (topography issues) and subsequent plat processing time by Jurisdiction in excess of typical review time
+ - The project is on the IC List for entitlement, substantial completion and sales commencement delays
+
+**Remaining Development**\      
+ - The Lots are expected to be Substantially Complete in Apr2024 (14 months behind proforma and first takedown date)      
+ - The Division plans to prepare a subphase earlier       
+ - LEN has experienced delays in review/approval of construction drawings      
+ - The site has complex Topo and grading work, which resulted in the Jurisdiction providing many rounds of comments during review      
+ - Engineering plans are approved and site work has commenced      
+
+**Sales Commencement**\	      
+ - The Community is expected to open for sales in Apr2024 (+/-10 months behind proforma sales commencement date)      
+
+**Unique Property Specific Obligations**\      
+ - The Community Amenity was to be open to residents by end of Dec2023        
+ - Based on the Development delays noted above, completion of the Amenity is also delayed and is now anticipated to be complete in Feb2025       
+ - However, LEN reports this delay will not impact permits or CofO's for the homes, as the municipality does not hold up permits based on Amenity completion      
+
+**Impact on Lot Takedowns**\      
+ - The project was on plat delay from Feb2023-Aug2023 due to the delays in recording the Final Plat, however LEN is back on schedule with takedowns       
+
+\pagebreak 
+
+## **Candleberry Place**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1250)
+kbInfo
+```
+**Background**\       
+ - The project was entitled and developed in one phase (105 total lots; 1 Lot Type)       
+ - The Final Plat records prior to Substantial Completion of the Lots       
+ - There are no Condo Plats needed for this project       
+ - Phase 1 (105 lots):  The Final Plat is recorded (prior to COE)       
+ - Phase 1: The lots are substantially complete (prior to COE)       
+
+**Sales Commencement**\       
+ - The Community opened for sale in Sep2023       
+ - Models are expected to be complete and open in Nov2023       
+
+**Sales and Market**\       
+ - Models recently had grand opening - Nov2023.       
+ - Builder has dropped pricing +/- 10% for homes ready to move - in , addition to offering "Home of the Week".          
+ - Sales performance to early to assess since models recently opened.       
+  
+**Next Steps**\       
+ - Continue with routine Project Reviews       
+
+\pagebreak 
+
+## **Cannery Park**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1168)
+kbInfo
+```
+
+**Background**\       
+ - The Project was entitled and developed in two phases (150 total lots; Phase  8 = 50 &amp; Phase 9 = 100 lots)       
+ - All Final Maps were recorded prior to COE         
+ - All Lots were Substantially Complete prior to COE         
+ - The Community is open for sales consistent with proforma and sales commencement date       
+
+**Impact on Lot Takedowns**\       
+ - LGI has elected to place 18 lots on Hiatus for Dec2023, and anticipates catching up on these takedowns in Jan2024       
+
+**Sales and Market**\       
+ - Last Q builder at 50% of sales due to higher interest rates.       
+ - Builder's overall sales performance exceeds proforma pace & ASP exceeding 10%.       
+ - Of the 19 lots under construction, builder has sold 12.         
+ - Over last Q, builder has seen a slow down in traffic (leads) due to affordability and seasonality.         
+ - Builder is pushing up marketing efforts and has purchased forward commitments to move product.       
+ - Builder has room in margin to increase incentives to obtain sales.       
+
+**Next Steps**\       
+ - Continue with routine Project Reviews       
+
+\pagebreak 
+
+## **Chapelgate**\       
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 918)
+kbInfo
+
+```
+**Background**\      
+ - The 134-Lot Property was entitled and developed in two phases (134 total lots)      
+ - The Final Plats for Phase 1 and Phase 2 were recorded before COE      
+ - The Phase 1 lots are Substantially Complete (+/-2 months behind proforma and first takedown date)      
+ - The Phase 2 lots are Substantially Complete (+/-1 month behind proforma and first takedown date)      
+ - The Property opened for sales in Apr2023 (1 month ahead of the proforma sales commencement date)       
+
+**Sales and Market**\      
+ - Community is selling extremely well at 7/M.vs. proforma of 1.6/M      
+ - Builder is offering significant incentives to move product up to 20% to move product for LEN year end closings.      
+ - Builder anticipates on pulling backing off incentives following their year end.      
+ - LEN is still giving heavy incentives to move through the current inventory, with averaging $126k in incentives to move product.      
+ -  Builders strategy for units under construction is to  holding off on incentivizing sales until the units are 60 days out from closing.       
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Chateau at Astonia**\            
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 942)
+kbInfo
+
+```
+**Background**\      
+ - The project was entitled and developed in one phase (182 total lots; 1 product type)      
+ - The Final Plat is recorded (ahead of proforma and first takedown date)      
+ - The Lots are Substantially Complete (1 month behind proforma and first takedown date)      
+ - The Community is open for sales (consistent with proforma sales commencement date)      
+
+**Sales and Market**\      
+ - Overall sales are at proforma since model grand opening JUN2023.        
+ - Builder has made pricing/incentive adjustments +/- 10% to increase sales.       
+ - At 55% for the Quarter.      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Copper Leaf**\         
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 765)
+kbInfo
+```
+**Background**\         
+ - The 153-Lot Property is being entitled in one phase and developed in four phases         
+ - The Final Map records prior to Substantial Completion of the Lots         
+ - The Final Plat was recorded prior to COE          
+ - Phase 1 (19 Lots):   The Lots are Substantially Complete (consistent with proforma and first takedown dates)         
+ - The Community is open for sales with models (6 months behind proforma sales commencement date)         
+ - The project is on the Watch List for substantial completion and sales commencement delays         
+
+**Development**\         
+ - Phase 2 (52 Lots):  The Lots are expected to be Substantially Complete in Dec2023 (8 months behind proforma and first takedown date)           
+ - Phase 3 (44 Lots):  The Lots are expected to be Substantially Complete in Aug2024 (8 months behind proforma and first takedown date for those lots).  LEN will develop the phase in subsections to ensure a sufficient flow of developed lots         
+ - Phase 4 (38 Lots):  The Lots are expected to be Substantially Complete in Dec2024 (12 months behind proforma and first takedown date for those lots).  LEN will develop the phase in subsections to ensure a sufficient flow of developed lots          
+
+**Sales and Market**\      
+ - Sales rates at 50% for the 4Q sales.      
+ -  Builder has seen success by utilizing rate buy down.       
+ - ASP at proforma pricing +3%.        
+ - Models open for sales in AUG2023.      
+ - Community is located in a very desirable school district  and lower tax rate to adjacent states which will attract buyers.      
+
+**Next Steps**\               
+ - The Community is on the Watch List and will be monitored closely for substantial completion progress          
+
+\pagebreak 
+
+## **Corinthalyn**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 896)
+kbInfo
+
+```
+**Background**\      
+ - The project is being entitled and developed in one phase (270 total lots; "A" = 128 & "B" = 142 lots)      
+ - The Final Map is recorded (ahead of proforma and first takedown date)      
+
+**Development**\      
+ - The Lots are Substantially Complete and able to obtain building permits (2 months behind proforma and first takedown date)      
+ - Full completion/energize is expected In Jan2024      
+ - LEN reports weather related delays halted development earlier in the year and Transformers were delayed getting on site      
+ - LEN has completed all LOMR requirements        
+
+**Sales Commencement**\      
+ - The Community commenced presales in Jul2023 (2 months behind proforma sales commencement date)      
+ - Models are expected to be fully operational in Jan/Feb2024      
+ 
+**Sales and Market**\      
+ - ASP is 2% (weighted average) over proforma.       
+ - Overall sales (soft) at 40% of profoma.      
+ - Models are anticipated for grand opening in FEB24      
+ - Builder is making price adjustments and rate buydowns to attract buyers.      
+ - LEN anticipates to generate sales as  units near completion.         
+
+**Next Steps**\      
+ - Continue with routine Project Reviews       
+
+\pagebreak 
+
+## **Coventry Chase**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 904)
+kbInfo
+
+```
+**Background**\      
+ - The 112-Lot Property is being entitled and developed in one phase      
+ - The Final Map records prior to Substantial Completion of the Lots      
+ - The Final Plat was recorded in Jan2023 (ahead of proforma and first takedown date)       
+ - The Lots are Substantially Complete (3 months behind proforma and first takedown date)      
+ - The Community is open for sales, models are complete (3 months behind the proforma sales commencement date)      
+
+**Sales and Market**\      
+ - Excellent sales at 136% for the Q.      
+ - Incentive/ASP down 10% to achieve sales.      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Crossroads THs**\           
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 501)
+kbInfo
+
+```
+**Background**\           
+ - The project was entitled and developed in one phase (141 total lots; 1 product type)     
+ - Final Plats record prior to Substantial Completion of the Lots     
+ - The Final Plat recorded in Jun2023 (+/-5 months behind proforma and first takedown date)     
+ - LEN reports the delay is due to longer than usual City review process     
+ - All Lots are Substantially Complete (+/-7 months behind proforma and first takedown date)     
+ - The project has been on the Watch List for substantial completion and sales commencement delays     
+
+**Sales Commencement**\          
+ - The Community did not open for sale to individual homebuyers in Feb2023 per proforma.       
+ - LEN has presold all the homes and will continue to take down the lots in accordance with the option agreement to meet the delivery schedule of its buyer.            
+ - Freehold is scheduled to close on the home sales at a rate of 12 per month          
+
+**Sales and Market**\      
+- All homes sold to Freehold Managment      
+
+**Impact on Lot Takedowns**\           
+ - The project was on plat delay from Jan2023-Jun2023 due to the delays in recording the Final Plat.             
+ - However, the Plat recorded and LEN is on schedule with takedowns           
+
+**Next Steps**\       
+ - The Community has been on the Watch List, however the plat is recorded and the lots are substantially complete.       
+ - In addition, LEN finalized the sale of all the lots to the for rent operator ("Freehold") and the project is back on track     
+
+\pagebreak 
+
+## **Delray Trails**\         
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 570)
+kbInfo
+
+```
+**Background**\        
+ - The Project is being entitled in 1 phase and developed in two phases (331 total lots; 2 lot types)        
+ - The Final Plat is recorded (1 month behind proforma and first takedown date)        
+ - Phase 1a: Lots are Substantially Complete (8 months behind proforma and first takedown date)        
+ - LEN reports the development work was delayed primarily due to slow plan approvals         
+ - The Community is open for sales (consistent with proforma sales commencement date)        
+ - The Project has been on the Watch List for substantial completion delays (Phase 1a)        
+
+**Development**\        
+ - Phase 1b: Lots are expected to be Substantially Complete in Dec2023 (ahead proforma and first takedown date for those lots)        
+
+**Sales and Market**\      
+ - ASP exceeding proforma by 17%      
+ - Overall sales at 94% of proforma.      
+ - At overall sales pace for the B lots (SFD) for the Q      
+ - Sales for the A (Attahced) at 50% of proforma.       
+ - Team considers sales performance low risk due to margin ASP over profoma to allow for future pricing/incentive adjustments to move product.        
+
+**Next Steps**\                   
+ - The Community has been on the Watch List, however Phase 1a lots are now complete and the project is back on track        
+ - Continue with routine Project Reviews        
+
+\pagebreak 
+
+## **East Hanover**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 921)
+kbInfo
+
+```
+**Background**\      
+ - The 247-Lot Property has one entitlement phases and three development phases      
+ - The Final Map records prior to Substantial Completion of the Lots      
+ - The Final Plat for Phase 1, which includes all three development subphases 1a, 1b and 1c, was recorded before COE       
+ - Phase 1a (55 Lots):  The Lots are Substantially Complete (2 months behind proforma; LEN acquired partially completed lots in Mar2023 and Apr2023)      
+ - Phase 1b (124 Lots):  The Lots are now Substantially Complete (5 months ahead proforma and first takedown date)      
+
+**Development**\      
+ - Phase 1c (68 Lots):  The Lots are expected to be Substantially Complete in Jun2024 (4 months behind proforma and first takedown date)      
+
+**Sales Commencement**\      
+ - Presales commenced from a satellite office near the Property in late Jul2023 (1 month behind the sales commencement date)      
+ - LEN anticipates building two models, the first is expected to be complete in Feb2024 and the second in May2024        
+
+**Sales and Market**\      
+ - Models to open in FEB2024 and May2024.      
+ - ASP 3% is over proforma.       
+ - Builder's pre-sales sales at 40% for the Q.      
+ - Builder anticpates stronger sales once the models are open.      
+
+**Unique Property Specific Obligations**\      
+ - The Community Amenity is required to be open to residents by Dec2024        
+ - LEN reports that there will not be an issue meeting this date.  The amenity is less than a one-year build cycle, and they will be able to commence construction prior to the end of 2023        
+
+**Next Steps**\      
+ - Continue with routine Project Reviews and monitoring of the Community Amenity opening date         
+
+\pagebreak 
+
+## **Elevon**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 619)
+kbInfo
+
+```
+**Background**\      
+ - The Project is being entitled and developed in one phase (168 total lots)      
+ - The Final Plat recorded upon Substantial Completion of the Lots      
+ - The Final Plat is recorded (2 months behind proforma and first takedown date)      
+ - The Community is opened for sales (+2 months behind proforma sales commencement date)        
+
+**Sales and Market**\      
+ - Overall sales are at 50% to profoma.  Traffic remains constant. with models opening in Oct2023.         
+ - ASP is over proforma by 11%.         
+ - Buyers preference is the Estate lots with the 3-car garage option and are using price adjustments, incentives and rate buy-downs to attract buyers for both product lines.        
+ - Overall market (DFW) remains strong.        
+ - Builder anticipates increase sales in 1Q2024 following the traditional seasonal slow down in the market along,  with the opening of the main thoroughfare (Hwy 78) that provides convenient access to the community.           
+
+**Next Steps**\        
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Enclave at Hillandale**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 657)
+kbInfo
+
+```
+**Background**\      
+ - The Project is being entitled and developed in one phase (44 total lots)      
+ - The Final Plat records prior to Substantial Completion of the Lots      
+ - The Final Plat is recorded (3 months behind proforma and first takedown date)      
+ - The Lots are Substantially Complete and building permit ready (4 months behind proforma and first takedown date)      
+ - The Community opened for sales (consistent with proforma and sales commencement date)      
+
+**Sales and Market**\      
+ - Builder is at 50% pace to proforma.      
+ - ASP has been reduced by $97K (lower by 10%) - $1.3M product      
+ - Behind for the last Q  by 3 sales for the Q.      
+ - Higher interest rates have put pressure on sales      
+ - Builder is buying down rates with 2/1 buy-downs programs to sub 4% to attract buyers and has increase marketing efforts (advertising and PR) effort for community awareness.      
+ - Due to price points buyers, are awaiting for completion of production product and timing of units to select homes.       
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Flora Meadows**\         
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 724)
+kbInfo
+
+```
+**Background**\         
+ - The project is being entitled and developed in two phases (285 total lots; 1 product type)         
+ - The Final Plats record prior to Substantial Completion         
+ - Unit 1 (172 lots): The Final Plat is recorded (2 months behind proforma and first takedown date)         
+ - The Community is on the Watch List for substantial completion and sales commencement delays         
+
+**Entitlements**\         
+ - Unit 2 (113 lots): The Final Plat is expected to record in Jun2024 (ahead of proforma and first takedown date for those lots)         
+ - There are no Condo Maps needed for this project         
+
+**Development**\                      
+ - Unit 1: The Lots are expected to be Substantially Complete in Feb2024 (6 months behind proforma and first takedown date)         
+ - LEN is currently paving the streets in this area         
+ - LEN reports city processing delays contributed to the development delays         
+ - Unit 2:  The Lots are expected to be Substantially Complete in Apr2025 (4 months behind proforma and first takedown date for those Lots)         
+ - LEN has been taking down unfinished lots since Aug2023                  
+
+**Offsite Improvements**\           
+ - All offsite easements are secured and recorded                     
+ - Offsite improvements are substantially complete                    
+ - Improvements consist of turn lanes and road widening along the property frontage/secondary access                   
+
+**Sales Commencement**\                 
+ - The Community is expected to open for sales in Feb/Mar2024 (+/-7 months behind proforma sales commencement date)                  
+ - Development delays reported above have contributed to the grand opening delays      
+ - The Community is expected to open for sale in Feb/Mar2024                  
+    
+**Next Steps**\                      
+ - The Community is on the Watch List and will be closely monitored for substantial completion and sales commencement progress                  
+ - Continue with routine Project Reviews                  
+
+\pagebreak 
+
+## **Grace Valley**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1273)
+kbInfo
+
+```
+Background**\      
+ - The project is being entitled and developed in seven phases (778 total lots; 2 Lot Types)      
+ - The Final Map records prior to Substantial Completion of the Lots      
+ - GV-Unit 1 (124 lots):  The Final Plat is recorded (prior to COE)      
+ - GV-Unit 1:  The lots are Substantially Complete (prior to COE)      
+
+**Entitlement**\      
+ - C-Unit 1 (144 lots):  The Final Plat is expected to record in Feb2024 (2 months behind first takedown date for those lots)      
+ - C-Unit 2 (87 lots):  The Final Plat is expected to record in Oct2024 (consistent with first takedown date for those lots)      
+ - C-Unit 3 (86 lots):  The Final Plat is expected to record in Jul2025 (consistent with first takedown date for those lots)      
+ - C-Unit 4 (64 lots):  The Final Plat is expected to record in Jun2026 (consistent with first takedown date for those lots)      
+ - GV-Unit 2 (162 lots):  The Final Plat is expected to record in Jun2024 (consistent with first takedown date for those lots)      
+ - GV-Unit 3a (111 lots):  The Final Plat is expected to record in Jan2026 (consistent with first takedown date for those lots)      
+
+**Development**\      
+ - C-Unit 1:  The lots are expected to be substantially complete in Feb2024       
+ - C-Unit 2:  The lots are expected to be substantially complete in Oct2024       
+ - C-Unit 3:  The lots are expected to be substantially complete in Jul2025       
+ - C-Unit 4:  The lots are expected to be substantially complete in Jun2026      
+ - GV-Unit 2:  The lots are expected to be substantially complete in Jun2024      
+ - GV-Unit 3a:  The lots are expected to be substantially complete in Jan2026      
+ 
+**Sales Commencement**\      
+ - The Community is expected to open for sale with completed models for the "A" lots in May2024      
+ - The Community is expected to open for sale with completed models for the "B" lots in Jan2024      
+
+**Sales and Market**\      
+ - The Community is expected to open for sale with completed models for the "A" lots in May2024      
+ - The Community is expected to open for sale with completed models for the "B" lots in Jan2024      
+
+**Impact on Lot Takedowns**      
+ - LEN is expected to be on Plat delay for the "A" type lots (10 lots) until Feb2024      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Granary Park Ph 2**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1265)
+kbInfo
+
+```
+**Background**\      
+ - The project is being entitled and developed in three phases (279 total lots; 3 Lot Types)      
+ - The Final Map records prior to Substantial Completion of the Lots      
+ - Phase 2A (103 lots):  The Final Map has recorded (prior to COE)      
+ - Phase 2A:  The Lots are substantially complete (prior to COE)      
+ - Phase 2B (83 lots):  The Final Map has recorded (prior to COE)      
+ - Phase 2B:  The lots are substantially complete (ahead of proforma and first takedown date)      
+ - Phase 2C (93 lots):  The Final Map is recorded (ahead of proforma and first takedown date for those lots)      
+ - Phase 2C:  The lots are substantially complete (ahead of proforma and first takedown date)      
+ - The Community is open for sale (consistent with proforma sales commencement date)      
+
+**Sales and Market**\
+ - Builder offering up 2-1 rate buydown to obtain sales which has increased sales from last Q.      
+ - Sales for the Q at 70% of proforma. vs. 50% overall to profomra.       
+ - ASP at 95% of proforma.      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Grantline 220**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1173)
+kbInfo
+
+```
+**Background**\      
+ - The Final Map is recorded      
+ - The Project is being developed in six units:        
+ - Unit 1 (130 Lots: 36 A lots, 3 B lots, 50 C lots, 8 D lots, 33 E lots)       
+ - Unit 2 (79 Lots: 15 A lots, 64 D lots)      
+ - Unit 3 (128 Lots: 60 A lots, 10 B lots, 6 C lots, 52 D lots)      
+ - Unit 4 (61 Lots: 61 B lots)      
+ - Unit 5 (59 Lots: 59 E lots)      
+ - Unit 6 (116 Lots: 16 B lots, 34 C lots, 66 D lots)      
+ - Units 1-5 lots are substantially complete (consistent with proforma and first takedown date)      
+
+**Development**\      
+ - Unit 6 lots are expected to be substantially complete in Feb2024 (consistent with proforma and first takedown date for those lots)      
+
+**Sales Commencement**\      
+ - LEN commenced model construction in Jul2023; Grand Opening for sales is expected in Jan2024 (2 months behind pro forma sales opening date)      
+ 
+**Sales and Market**\      
+ - Models anticipated to open in JAN2024      
+ - D&E lots builder has had soft sales achieving sales at 40% to Q.      
+ - Builder anticipates increase sales activities once models are open.       
+ - Overall weighted ASP at proforma.       
+
+**Next Steps**\      
+ - Follow up in Jan2023 on sales opening      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Lake Emily**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 936)
+kbInfo
+
+```
+**Background**\      
+ - The project is being entitled in one phase and developed in two phases (171 total lots; 3 product types)      
+ - Final Plat records prior to Substantial Completion of the lots      
+ - The Final Plat is recorded (ahead of proforma and first takedown date)       
+ - Phase 1 (99 Lots): The Lots are Substantially Complete in Aug2023 (ahead of proforma and first takedown date)      
+ - Phase 1 lots include all lot types      
+ - The Community is open for sales (consistent with proforma sales commencement date)      
+
+**Development**\      
+ - Phase 2 (72 Lots): The Lots are expected to be Substantially Complete in Feb2024 (ahead of proforma and first takedown date for those lots)       
+ - LEN is currently installing utilities and expects to pave in Feb2024      
+
+**Sales and Market**\      
+ - LEN reported one A Lot sale in Nov2023 at an ASP 6% below Proforma      
+ - Awaiting traffic and incentives from the sale team.      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **LPGA Phase 2**\               
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 710)
+kbInfo
+
+```
+**Background**\         
+ - The project was entitled and developed in one phase (276 total lots; 3 product types)         
+ - The Final Plat records prior to Substantial Completion of Lots         
+ - The Final Plat is recorded (2 months behind proforma and first takedown date)         
+ - The Lots are Substantially Complete (+/-6 months behind proforma and first takedown date)         
+ - LEN reports this delay is due to additional utility work and site plan revisions required by the Approving Authority           
+ - The project has been on the Watch List for substantial completion and sales commencement delays                  
+
+**Sales Commencement**\           
+ - Sales are expected to commence in Dec2023 (+/-6 months behind proforma sales commencement date)             
+ - Still selling in phase 1 (not land banked), will sell using models in Phase 1 starting winter 2023/spring 2024         
+     
+**Next Steps**\           
+ - The Community has been on the Watch List, however the lots are now substantially complete and the community is expected to open for sales in next few weeks         
+ - Continue with routine Project reviews              
+
+\pagebreak 
+
+## **LWR Aurora**\              
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 920)
+kbInfo
+
+```
+**Background**\              
+ - The project is being entitled one phase and developed in 4 phases (247 total lots; A" = 73 & "B" = 174 lots)              
+ - The Final Plat is recorded (1 month ahead of proforma and first takedown date)              
+ - Phase 1A ("A" lots = 42):  The Lots are Substantially Complete (1 months behind proforma and first takedown date)              
+ - Phase 1B ("B" lots = 52):  The Lots are Substantially Complete (1 month behind proforma and first takedown date)              
+ - The Community is open for sales (6 months behind proforma sales commencement date of Mar2023)              
+ - The project is on the Watch List for sales commencement delays              
+
+**Development**\              
+ - Phase 2B ("B" lots = 80):  The Lots are expected to be Substantially Complete in Feb2024 (ahead of proforma and first takedown date for those lots)              
+ - Phase 3A ("A" lots = 73):   The Lots are expected to be Substantially Complete in Feb2024 (ahead of proforma and first takedown date for those lots)              
+
+**Sales and Market**\      
+ - Home construction started September 2023 3 TH buildings, 11 SFD      
+ - Sales September 2023 15, October 2023  11, November 2023 month to date 2      
+
+**Next Steps**\                 
+ - The Community has been on the watch List, however the project is now open for sales and is back on track              
+ - Continue with routine Project Reviews              
+
+\pagebreak 
+
+## **Mission Del Lago**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1171)
+kbInfo
+
+```
+**Background**\      
+ - The project is being entitled in one phase and developed in two phases (435 total lots; 3 Lot Types)      
+ - The Final Map records prior to Substantial Completion of the Lots      
+ - Phase 1 (435 lots):  The Final Map has recorded (prior to COE)      
+ - Unit 1a (244 lots):  The lots are substantially complete (prior to COE)      
+ - Unit 1b (191 lots):  The lots are substantially complete (ahead of proforma and first takedown date for those lots)      
+ - The Community is open for sale with completed models (consistent with proforma sales commencement date)      
+
+**Sales and Market**\      
+ - All product lines in this Community are now open for sale       
+ - Two of the Three product lines are achieving a sales pace way above 4Q2023 proforma       
+ - LEN achieved 25 total net sales in Nov2023 - (avg +8 per product line)      
+ - Pricing is remaining steady, and LEN is offering rate buydowns and closing cost assistance      
+ - LEN reports traffic is good, and they are targeting entry level homebuyer by offering a compelling value for the submarket      
+ - Project is expected to close out early as LEN is significantly ahead of schedule with takedowns      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Mosaic at Heritage El Dorado**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 867)
+kbInfo
+
+```
+**Background**\      
+ - The project was entitled and developed in 1 phase (145 total lots; 1 product line)      
+ - The Final Maps were recorded prior to COE      
+ - The Lots were Substantially Complete prior to COE      
+ - The Community is open for sales (consistent with proforma sales commencement date)      
+
+**Sales and Market**\      
+ - LEN is exceeding proforma pace for sales (20 net sales in Sep2023 & Oct2023)      
+ - LEN reports strong traffic coming from well qualified buyers      
+ - LEN is marketing to active adult , luxury lifestyle buyers in the local area as well as the Bay area      
+ - LEN is offering rate buy downs and seller paid closing costs.      
+
+Next Steps          
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Old Stone Ranch**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1237)
+kbInfo
+
+```
+**Background**\      
+ - The project was entitled and developed in one phase (43 total lots; 1 Lot Type)      
+ - The Final Plat records prior to Substantial Completion of the Lots      
+ - There are no Condo Plats needed for this project      
+ - Phase 1 (43 lots):  The Final Plat is recorded (prior to COE)      
+ - Phase 1: The lots are substantially complete (2 months ahead of first takedown date)      
+
+**Sales Commencement**\      
+ - The Community is expected to open for sale in Dec2023 (2 months behind proforma sales commencement date)      
+
+**Sales and Market**\      
+ - The Community is expected to open for sale with completed models in Dec2023      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Peete Town Mill**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 612)
+kbInfo
+
+```
+**Background**\          
+ - The 198-Lot Property is being entitled and developed in two phases    
+ - The Final Maps records upon Substantial Completion of the Lots    
+ - Phase 1 (121 Lots):  The Final Map is recorded, and lots are Substantially Complete (6 months behind proforma and first takedown date)    
+ - The Community is open for sales (9 months behind proforma sales commencement date)      
+ - The project has been on the Watch List for entitlement and sales commencement delays    
+
+**Entitlements/Development**\          
+ - Phase 2 (77 Lots):  The Final Plat is expected to record in Dec2023 (ahead of first takedown date for those lots)              
+ - Phase 2:  The lots are expected to be Substantially Complete in Dec2023              
+
+**Sales and Market**\      
+ - Builders overall sales are at 83% of proforma since opening in Arp2023.      
+ - Team concern of builders discounts to obtain sales.   
+ - Team will monitor sales/discounts and performa analysis of builder's updated gross margin.      
+
+**Next Steps**\              
+ - The Community has been on the Watch List, and will be monitored closely for remaining entitlement and substantial completion progress              
+
+\pagebreak 
+
+## **Preserve Option**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1124)
+kbInfo
+
+```
+**Background**\      
+ - The Project was entitled and developed in one phase (230 total lots)      
+ - All Final Maps were recorded prior to COE        
+ - All Lots were Substantially Complete prior to COE      
+
+**Sales Commencement**\      
+ - The Community is open for sales for the excluded lots       
+ - The Land Bank lots are expected to open for sale in 4Q2023 (3 months behind proforma sales commencement date)      
+
+**Sales and Market**\
+ - Overall sales performance above proforma.      
+ - ASP 5% over proforma.      
+ - Similar to other LGI communities Builder has ramped up marketing efforts to generate leads, additionally LGI has purchased forward commitments (buying down rate to 5.75%)  to move product - seeing moderate success      
+ - Affordability and seasonality issues facing builder sales.      
+ - Builder has room in margin to increase incentives to obtain sales.      
+ - Project in WL due to sales at 60% to proforma for the Q.      
+ - On Sales Performance WL.      
+
+**Impact on Lot Takedowns**\      
+ - LGI has elected to place 17 lots on Hiatus for Dec2023, and anticipates catching up on these takedowns in Jan2024      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Rustic Road**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 483)
+kbInfo
+
+```
+**Background**\      
+ - The project is being entitled in four phases (697 total lots; 4 product types)      
+ - The Plats are recorded prior to Substantial Completion of the Lots      
+ - Ph1 North (185 lots): The Plat is recorded (+/-2 months behind proforma and first takedown date)      
+ - Ph1 South (111 lots): The Plat is recorded (+/-2 months behind proforma and first takedown date)      
+ - This project is being developed in five phases       
+ - Ph1 North Lots are now Substantially Complete (+/-11 months behind proforma and first takedown date)       
+ - Ph1 South Lots are now Substantially Complete (+/-5 months after proforma and first takedown date)        
+ - The Community is opening for sales (2 months ahead of proforma sales commencement date)       
+ - The project is on the Watch List for substantial completion delays on Phase 1      
+
+**Entitlements**\      
+ - Ph2 North (245 lots):  The Plat is expected to record in 2Q2024 (4 months behind proforma and first takedown for those Lots)      
+ - Ph2 South (155 lots):  The Plat is expected to record in 2Q2024 (4 months behind proforma and first takedown for those Lots)      
+
+**Development**\      
+ - Ph2 North Lots are expected to be Substantially Complete in 2Q2024       
+ - Ph2 South Lots are expected to be Substantially Complete in 2Q2024       
+ - MTH reports delays in the initial phases were due to supply chain constraints and processing times      
+ - The discovery and necessary relocation of a Verizon communications line also impacted the schedule      
+
+**Impact on Lot Takedowns**\      
+ - MTH has elected to place 45 lots on Hiatus through Jan2024      
+
+**Sales and Market**\
+- Builder has begin pre-sales and is behind for the Q.      
+- ASP is above proforma by 14%      
+- All three models opened in Dec2023 with Grand Opening soon to follow in 1Q.      
+- Incentives for the A Lots are approximately 10% ($40K) including closing costs and price discounts.      
+- B Lots are Live Now product targeting first-time homebuyer offered $31K in closing costs and price discounts.      
+- The Reserve C Lot buyer is first and second-time move-up buyer offered $71K in incentives.      
+- Company-wide MTH is offering buy downs to lock in rates.      
+- Traffic has been strong for all three months of 4Q, reporting December traffic of 62 (A), 24 (B) and 9 (C).        
+- Builder noted the only reduction in traffic reflected in move-up buyer product.      
+- Margins continue to be strong with GM at 28%-30%.      
+
+**Next Steps**\              
+ - Continue with routine Project Reviews and monitor substantial completion of Phase 2 North and Phase 2 South Lots      
+
+\pagebreak 
+
+## **Sagebrooke**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 439)
+kbInfo
+
+```
+**Entitlement**\      
+- Phase 2 Plat recorded on 12/14/2023      
+
+**Background**\      
+- The Project is being entitled and developed in two phases (451 total lots; 2 product types)        
+- The Final Map records prior to substantial completion of the lots      
+- Phase 1 (262 lots: 163 A lots; 99 B lots): The Final Plat has recorded (consistent with proforma and first takedown date)      
+- Phase 1 Lots are Substantially Complete (consistent with proforma and first takedown date)      
+
+**Entitlement**\      
+- Phase 2 (189 lots: 114 A lots; 75 B lots): The Final Plat is expected to record in Dec2023 (consistent with proforma and first takedown date for those Lots)      
+
+**Development**\      
+  - Phase 2 Lots are expected to be Substantially Complete May2024 (consistent with proforma and first takedown date for those Lots)        
+
+**Sales Commencement**\      
+ - The Community opened for sales in Oct2023 (+/-2 months behind proforma sales commencement date of Aug2023)      
+ - Grand Opening occurred in Nov2023      
+
+**Sales and Market**\      
+ - Models are open and Grand Opening was held min mid-late 4Q.      
+ - Builder is reporting 7 closings to date with 42 spec homes underway.      
+ - Traffic for November and December were strong with 14 and 13 respectively.      
+ - Incentives for A Lots equals to approximately 11%  ($43K) toward closing costs and discounts.      
+ - ASP for December A Lot was lower due to one home garnering $96K in incentives.        
+ - Builder is offering discounts of 12% ($43K) in closing costs and discounts.        
+
+**Next Steps**\        
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Sierra Vista**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 732)
+kbInfo
+
+```
+**Background**\      
+ - The project is being entitled and developed in 13 phases (651 total lots; 6 product lines)      
+ - The Final Maps for 12 of the 13 Phases (552 Lots) are recorded (consistent with proforma and first takedown date)      
+ - The Lots in 12 of the 13 Phases are Substantially Complete (consistent with proforma and first takedown date)      
+ - The Community is open for sales (consistent with proforma sales commencement date)      
+
+**Entitlement/Development**\      
+ - The last Final Map (99 Lots) is expected to record Dec2023 (well ahead of proforma and first takedown date of Feb2025 for those Lots)      
+ - The final phase is expected to be Substantially Complete in Jan2024 (well ahead of proforma and first takedown date for those Lots      
+
+**Sales and Market**\      
+ - Builder's overall sales rates are over proforma since opening in Sept2020.      
+ - The team is concerned of builders drop in ASP to proforma  (20%+) needed to obtain sales.      
+ - Team will to continue to monitor sales/pricing discounts monthly and analysis builder's updated gross margin.      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Silverleaf Parcel 22**\     	
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 644)
+kbInfo
+
+```
+**Background**\      
+ - The project is being entitled and developed in three phases (560 total lots; 4 product types)      
+ - Final Plats record prior to Substantial Completion of the Lots      
+ - Phase 1 & 1A (220 Lots): The Final Plat is recorded      
+ - The project is on the IC List for entitlement, substantial completion and sales commencement delays      
+
+**Entitlement**\      
+ - Phase 2 (220 Lots): The Final Plat is expected to record in Jan2024 (ahead of proforma and first takedown date for those lots)      
+ - Phase 3 (120 Lots): The Final Plat is expected to record in Jan2024 (ahead of proforma and first takedown date for those lots)      
+
+**Development**\          
+ - Phase 1: The Lots are expected to be Substantially Complete in Jan2024 (9 months behind proforma and first takedown date)      
+ - Phase 1A: The Lots are expected to be Substantially Complete in Aug2024 (13 months behind proforma and first takedown date for those lots)      
+ - Phase 2: The Lots are expected to be Substantially Complete in Mar025 (6 months behind proforma and first takedown date for those Lots)      
+ - Phase 3: The Lots are expected to be Substantially Complete in Jul2025 (1 month prior to the end of the Option term)      
+ - LEN reports delays in completing offsite work (now complete)      
+ - Material sourcing and shortage of contractors also contributed to the development delays            
+
+**Sales Commencement**\            
+ - The Land Bank Lots are expected tom open for sale in Jun/Jul2024 (12 months behind proforma sales commencement date)      
+ - The project did open for sale in mid 2023, however due to the delays in land development LEN paused sales      
+
+**Sales and Market**\      
+ - LEN reports that traffic in the MP Silverfalls at Silverleaf is the best in the entire division.      
+ - Incentives vary based on the closing date of a home and rate buy downs are the most popular for buyers in this community.      
+ - Buyers in this community expect the biggest discounts over almost any other community.      
+ - Sales were paused 8 months ago after initial release due to unexpected delays in land development.        
+ - Buyers that purchased in the initial release and under contract are waiting for site development completion.      
+ - Land Bank lots are not yet released for sales and final pricing has not yet been set for the Towns.  Sales are not expected until Jul2024.      
+
+**Unique Property Specific Obligations**\      
+ - The Property's Underlying Seller is required to sign the Final Plat        
+ - The Seller signed the Plat ahead of the first Plat recording in Apr2023 as required      
+ - The Seller will not be required to sign any of the remaining Plats as the access Road is now legally platted      
+
+**Next Steps**\      
+ - The Community is on the IC List and will be monitored closely for substantial completion of the remaining phases     
+
+## **Steelwood Trails**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 865)
+kbInfo
+
+```
+**Background**\      
+ - The project was entitled and developed in two phases (239 total lots; 2 product types)      
+ - The Final Plats record prior to Substantial Completion of the Lots      
+ - Both Final Plats were recorded prior to COE        
+ - Unit 1 (101 lots):  The Lots are Substantially Complete (4 months behind proforma and first takedown date)      
+ - LEN is currently working on a few clean up items but building permits have been received and home construction has commenced      
+ - Unit 2 (138 Lots): The Lots are Substantially Complete (5 months behind proforma and first takedown date for those Lots)        
+ - Offsite Improvements are Substantially Complete        
+ - LEN reports delays in receiving transformers caused the delays in both Phases.        
+ - The Community is open for sales (+/-4 months behind proforma sales commencement date)      
+
+**Sales and Market**\      
+ - Builder recently open for sales in late Sept2023 and has achieved sold sales since opening.       
+ - The team has a concern with the drop in ASP to proforma and price adjustments/incentives being offer by the builder is using necessary to obtain sales in the competitive new home market of New Braunfels, TX (San Antonio).      
+ - Team will to continue to monitor sales/pricing discounts monthly to proforma,  analysis builder's updated gross margin and perform (via JBREC) market overview analysis of the specific submarket and project's position within the market.         
+       
+**Next Steps**\      
+ - Continue with routine Project Reviews    
+ 
+\pagebreak 
+
+## **Sunset Oaks - LEN**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1144)
+kbInfo
+
+```
+**Background**\      
+ - The project is being entitled and developed in six phases (528 total lots; 1 Lot Type)      
+ - The Final Plat records prior to Substantial Completion of the Lots      
+ - All Final Plats (except Phase 3B) are recorded (prior to COE).  This represents 365 lots      
+ - All Land Bank Lots (except Phase 3B) are Substantially Complete (prior to COE)       
+ - The Community is open for sales (consistent with proforma sales commencement date)      
+      
+**Entitlement**\      
+ - Phase 3B (163 lots):  The last Final Plat is expected to record in Jan2024 (ahead of proforma and first takedown date for those Lots)      
+
+**Development**\      
+ - Phase 3B:  The lots are expected to be substantially complete in Aug2024 (ahead of proforma and first takedown date for those Lots)      
+
+**Sales and Market**\      
+ - Builder is at proforma sales for the Q.        
+ - The team has a concern with the drop in ASP to proforma and price adjustments/incentives being offer by the builder is using necessary to obtain sales in the competitive new home market of New Braunfels, TX (San Antonio).      
+ - Team will to continue to monitor sales/pricing discounts monthly to proforma,  analysis builder's updated gross margin and perform (via JBREC) market overview analysis of the specific submarket and project's position within the market.       
+
+**Next Steps**\
+ - Continue with routine Project Reviews
+   
+\pagebreak 
+
+## **Tanglewood**\         
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 762)
+kbInfo
+
+```
+**Background**\          
+ - The project was entitled and developed in three phases (181 total lots; 2 product types)         
+ - The final plat is recorded prior to substantial completion of lots          
+ - Phase 1 (46 Lots): The Final Plat is recorded (ahead of proforma and first takedown date)         
+ - Phase 2 (96 Lots): The Final Plat was recorded June 7, 2023 (consistent with proforma and first takedown date for those Lots)         
+ - Phase 3 (31 Lots): The Final Plat was recorded June 7, 2023 (consistent with proforma and first takedown date for those Lots)            
+ - Phase 1: The Lots are Substantially Complete (ahead of proforma and first takedown date)         
+ - The Community opened for sales in Oct2023 (5 months behind proforma sales commencement date)         
+ - The project is on the Watch List for substantial completion delays         
+
+**Development**\                     
+ - Phase 2: The Lots are expected to be Substantially Compete in Jan2024 (10 months behind  proforma and first takedown date for those Lots)           
+ - Phase 3: The Lots are expected to be Substantially Complete in Feb2024 (9 months behind  proforma and first takedown date for those Lots)           
+ - LEN reports that the delay of both phase 2 and 3 was due to weather halting development and issues sourcing materials         
+
+**Next Steps**\           
+ - The Community is on the Watch List and will be monitored closely for substantial completion progress for Phases 2 & 3.            
+
+\pagebreak 
+
+## **Twelve Parks**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1189)
+kbInfo
+
+```
+**Background**\      
+ - The project is being entitled in one phase and developed in two phases (129 total lots; 2 Lot Types)      
+ - The Final Plat records prior to Substantial Completion of the Lots      
+ - Phase 1&amp;2 (129 lots):  The Final Plat is recorded (prior to COE)      
+ - Phase 1 (115 lots):  The lots are substantially complete (prior to COE)      
+ - The Community is open for sale (consistent with proforma sales commencement date)      
+ - Models opened in Oct2023      
+
+**Development**\      
+ - Phase 2 (14 lots):  The lots are expected to be substantially complete in Dec2023 (prior to first takedown date for those lots)      
+
+**Sales and Market**\      
+ - Community opened for pre-sales in Jun2023,       
+ - 4 months prior to Model opening.        
+ - Models opened for sales Oct2023.        
+ - Sales are sluggish due to seasonality.          
+ - Builder has is making adjustments to via incentive by up to 15% to gain momentum.         
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Valencia Phase 3B**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 487)
+kbInfo
+
+```
+**Background**\      
+ - The project was entitled in one phase (328 total lots; 3 product types - "A" = 88; "B" = 124; "C" = 58 &; "D" = 58 lots)      
+ - The Final Map has recorded (ahead of proforma and first takedown date)      
+ - The Lots are Substantially Complete (consistent with proforma and first takedown date)      
+ - Offsite Improvements are Complete (consistent with proforma and first takedown date)      
+ - The Community is open for sales for the "C" &amp; "A" lots (consistent with proforma sales commencement date)      
+
+**Sales Commencement**\      
+ - Models have commenced on the remaining lots and are expected to be open for sale in Dec2023 (2 months behind proforma schedule)      
+  
+**Sales and Market**\      
+ - Sales are ahead of proforma pace      
+ - LEN reports strong traffic and 3 net sales in Nov2023 (for the "C" Lots)      
+ - ASP is slightly lower than underwriting      
+ - LEN is ahead of Schedule with takedowns      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews            
+
+\pagebreak 
+
+## **Valley Oak**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 653)
+kbInfo
+
+```
+**Background**\      
+ - This Project was entitled and developed in two phases (121 lots; 2 product types)      
+ - The Final Map records prior to substantial completion of the lots      
+ - The Final Maps are recorded (consistent with proforma and first takedown date)        
+ - The Lots are Substantially Complete (consistent with proforma and first takedown date)      
+ - The Community is open for sale (4 months behind proforma sales commencement date)      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Veranda Preserve East**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 691)
+kbInfo
+
+```
+**Background**\      
+ - The project was entitled in one phase (464 total lots; 3 product types)      
+ - The Final Plat is recorded (consistent with proforma and first takedown date)      
+ - The project is being developed four phases       
+ - Phase 1a (25 lots): The Lots are Substantially Complete (consistent with proforma and first takedown date)        
+ - Phase 1 (114 lots): The Lots are Substantially Complete (consistent with proforma and first takedown date for those Lots)      
+ - The Community is open for sales (ahead of proforma sales commencement date)      
+
+**Sales and Market**\      
+ - The East phase opened in Sep2023 and they are using models already in place in the West phase.        
+ - Lennar has seen a decline in traffic and sales throughout Florida markets in all age targeted and age restricted communities during the fourth quarter.  They anticipate an increase in traffic and sales in the upcoming season.      
+ - Due to the shift in traffic and sales in age restricted/targeted communities, LEN divisions have teamed up and created a Florida Lifestyle Campaign with microsite and online advertising to bolster interest.  The campaign was launched in late October.      
+ - There are no inventory homes for the 52’s (B Lots) but the Builder has 2 available to close within 45 days on the 62’ (C Lots).  They will also have Twin product ready to close in the next 60-90 days.      
+ - Incentives at this time include paying all closing costs and, if needed, contributing toward a rate buydown for affordability purposes.      
+ - As they into 2024, LEN is projecting a sales pace of 5/month for the Twin product and 6/month for the SFD.      
+
+**Development**\      
+ - Phase 2 (183 lots): The Lots are expected to be Substantially Complete in Jan2024 (consistent with proforma and first takedown date for those Lots)      
+ - Phase 3 (142 lots): The Lots are expected to be Substantially Complete in Apr2024 (1 month behind proforma and first takedown date for those Lots)      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Vineyard Fox Hollow 2**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1232)
+kbInfo
+
+```
+**Background**\
+ - The Vineyard Fox Hollow 2 project includes is being entitled and developed in three phases       
+ - The Vineyard Fox Hollow 2 amended and restated option agreement includes a number of lots previously included in Vineyard Fox Hollow Option Agreement dated April 15, 2022      
+ - The combined lot count for Vineyard Fox Hollow 1 and Vineyard Fox Hollow 2 = 379 total lots; 3 Lot Types      
+ - The Vineyard Fox Hollow 2 Final Maps record after Substantial Completion of the Lots      
+ - Condo Maps are not required for this project      
+
+**Entitlement**\      
+ - Per NHC delay in recordation is due to agency staff lack of experience in resolving a proposed retaining wall required to be constructed in existing right-of-way. 4 options were presented by NHC, 3 were denied, 4th option for wall has been in review since Apr2023.      
+ - Vineyard Fox Hollow 2 - Phase 1a: Final Map is expected to record in mid-Jan2024       
+ - Vineyard Fox Hollow 2 - Phase 1b:  Final Map is expected to record in mid-Jan2024       
+ - Vineyard Fox Hollow 2 - Phase 2: Final Map is expected to record in Jun2024      
+ 
+**Development**\
+ - Vineyard Fox Hollow 2 -  Phase 1a:  The lots are substantially complete      
+ - Vineyard Fox Hollow 2 - Phase 1b:  The lots are substantially complete      
+ - Vineyard Fox Hollow 2 - Phase 2:  The lots are expected to be substantially complete in Jun2024       
+
+**Sales Commencement**\      
+ - The Community is open for sale with completed models (consistent with proforma sales commencement date)      
+
+**Sales and Market**\      
+ - Overall sales rate is at 79% of proforma.        
+ - Builder has seen slow down in the overall market due to seasonality.        
+ - Builder has made pricing adjustments on select lots for those comes market and reports that overall ASP is over proforma.               
+
+**Next Steps**\      
+ - Closely monitor retaining wall issue and recordation of final maps         
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Wander**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1405)
+kbInfo
+
+```
+**Background**\      
+ - The project was entitled and developed in one phase (108 total lots; 2 Lot Types)      
+ - The Final Map records upon Substantial Completion of the Lots      
+ - Phase 1 (108 lots):  The Final Map has recorded (prior to COE)      
+ - Phase 1:  The lots are substantially complete (prior to COE)      
+
+**Sales Commencement**\      
+ - LEN plans on preselling commencing in Nov2023      
+ - The Community is expected to open for sale with completed models in Jan2023 (1 month behind proforma sales commencement date)      
+
+**Sales and Market**\      
+ - LEN started preselling the community in Nov2023      
+ - The Community is expected to open for sale with completed models on January 16, 2024      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Wellen Park 2**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 1130)
+kbInfo
+
+```
+**Background**\      
+ - The project was entitled and developed in one phase (122 total lots; 1 product type)      
+ - Final Plat records prior to Substantial Completion of the lots      
+ - The Final Plats were recorded prior to COE      
+ - All Lots were Substantially Complete prior to COE      
+ - The Community is open for sales (consistent with proforma sales commencement date)      
+
+**Sales and Market**\      
+ - This deal is marketed as Antigua and is the second land bank transaction for Wellen Park/Antigua.      
+ - There are 6 homes left to sell in Wellen Park 1 and 36 left to sell in Wellen Park 2.      
+ - Total sales to date in Wellen Park 2 is 86 with a current ASP of $493,190.      
+ - Awaiting updated information on traffic and incentives.      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Woodridge**\      
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 527)
+kbInfo
+
+```
+**Background**\      
+ - The Final Map records after substantial completion of the lots      
+ - The Project is being entitled and developed in two phases (143 total lots; 1 product line)      
+ - Phase 1 and Phase 2 Final Maps have recorded (consistent with proforma and first takedown date for those Lots)      
+ - Phase 1 and Phase 2 lots are Substantially Complete (consistent with proforma and first takedown date)      
+ - The Community is open for sales (consistent with proforma sales commencement date)      
+
+**Sales and Market**\      
+ - Builder is at proforma sales for the Q.        
+ - The team is concerned of builder's  discounts/price reductions  (ASP variance of 24% to proforma) to obtain sales.       
+ - Team will to continue to monitor sales/pricing discounts monthly and perform analysis builder's updated gross margin.      
+
+**Next Steps**\      
+ - Continue with routine Project Reviews      
+
+\pagebreak 

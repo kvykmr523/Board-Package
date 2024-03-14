@@ -1,0 +1,415 @@
+---
+title: "Project Summaries"
+author: ''
+date: "`r Sys.Date()`"
+header-includes:
+  - \usepackage{fancyhdr}
+  - \pagestyle{fancy}
+  - \fancyhead[LO,LE]{EHF Project Updates}
+  - \fancyhead[RO,RE]{Confidential}
+  - \fancyfoot[CO,CE]{For Internal Use Only}
+  - \fancyfoot[RE,RO]{\thepage}
+  - \usepackage[T1]{fontenc}
+geometry: "left=2cm,right=2cm,top=3cm,bottom=2cm"
+fontsize: 12
+output:
+  pdf_document:
+    toc: yes
+    number_sections: true
+    df_print: kable
+    latex_engine: xelatex
+  html_document:
+    toc: yes
+    toc_float: no
+    number_sections: yes
+    theme: simplex
+  word_document:
+    toc: yes
+    number_sections: true
+    df_print: kable
+---
+
+```{=html}
+<style type="text/css">
+ body { 
+   font-family: "Source Sans Pro", sans-serif; 
+   font-size: 14px;
+ }
+ h1.title {
+   font-size: 20px;
+ }
+ td {  /* Table  */
+   font-size: 14px;
+ }
+ h1 { /* Header 1 */
+   font-size: 14px;
+   font-weight: bold; 
+   
+ }
+ h2 { /* Header 2 */
+   font-size: 14px;
+   font-weight: bold; 
+ }
+ h3 { /* Header 3 */
+   font-size: 16px;
+   font-weight: bold; 
+ }
+ blockquote { /* BlockQuote */
+   font-size: 14px;
+   color: DarkBlue;
+ </style>
+```
+```{=html}
+<style type="text/css">
+.main-container { /* dynamically fill window */
+  max-width: 100% !important;
+  margin: auto;
+}
+</style>
+```
+```{r include=FALSE, label="setup"}
+
+# If you want to flip the report to landscape, insert this before geometry in YAML Header
+# classoption: landscape
+
+# R Package Definitions                                       
+library(tidyverse)
+library(lubridate)
+library(tidyquant)  
+library(dplyr)
+library(scales)
+library(forcats)
+library(ggrepel)
+library(openxlsx)
+library(flextable)
+library(tinytex)
+library(knitr)
+library(kableExtra)
+library(rmarkdown)
+
+# knitr global options
+knitr::opts_chunk$set(echo = FALSE, error=FALSE)
+options(dplyr.summarise.inform = FALSE)
+
+```
+
+```{r include=FALSE, label="setup-input-filenames"}
+
+rm(list = ls())
+
+# Project Directory
+myDirectory <- "~/Dropbox/Board Package Material/CC R Portfolio"
+
+# The Project Files
+idf_ProjAll      <- paste0(myDirectory,"/03 df Files/dfProjAll.rda")
+
+# Load dfProjAll
+load(idf_ProjAll)
+
+```
+
+```{r GetProjectDetails, echo=FALSE}
+
+f01_GetProjectDetails <- function(project_lookup) {
+ 
+# retreive the Project   
+dfstart <- dfProjAll %>% subset(project_id == project_lookup)
+
+dftemp <- dfstart %>% 
+  select(c(Fund          = "fundid",
+           Builder       = "builder_3letter",
+           Project       = "proj_name",
+           Acquisition   = "book_status",
+           City          = "city",
+           State         = "state",
+           MSA           = "msa")) %>% 
+  as.list() %>% 
+  enframe(name="Name1", value="Value1") %>% 
+  rownames_to_column("Index")
+
+dftemp2 <- dfstart %>% 
+  mutate(project_costs.P = dollar(project_costs.P)) %>% 
+  mutate(hb_margin_percent = (hb_margin_percent)) %>% 
+  mutate(cb_Qtr1         = ifelse(is.na(cb_Qtr1),dollar(0),dollar(cb_Qtr1))) %>% 
+  select(c(NbrOfLots         = "num_lots",
+           NbrOfLotTypes     = "num_lot_types",
+           UnpurchasedLots   = "num_unpurchased.A",
+           FinalTDown        = "lots_in_final_tdown.A",
+           ProjectCost       = "project_costs.P",
+           Concentration     = "cb_Qtr1",
+           HB_Margin         = "hb_margin_percent")) %>% 
+  as.list() %>% 
+  enframe(name="Name2", value="Value2") %>% 
+  rownames_to_column("Index")
+
+dftemp3 <- dfstart %>% 
+  mutate(d_term_start        = format(d_term_start)) %>% 
+  mutate(d_term_end          = format(d_term_end)) %>% 
+  select(c(LB_COE            = "d_term_start",
+           Option_Term       = "opt_term",
+           RemainingMths     = "remain_term",
+           OptionEnds        = "d_term_end",
+           FirstTDownMth     = "first_takedown_period.P")) %>% 
+  as.list() %>% 
+  enframe(name="Name3", value="Value3") %>% 
+  rownames_to_column("Index")
+
+dfFinal <- merge(x=dftemp,y=dftemp2,by="Index",all=TRUE)
+dfFinal <- merge(x=dfFinal,y=dftemp3,by="Index",all=TRUE)
+dfFinal <- dfFinal %>% select(-c(Index))
+dfFinal[is.na(dfFinal)] <- " "
+
+# Now build and return the Presentation Table
+kbFinal <- knitr::kable(dfFinal, col.names = NULL, booktabs=T, linesep = "") %>%
+          kable_styling(full_width = T) %>%
+          column_spec(c(3,5), width = "2.5cm", color = "blue", bold = F) %>% 
+          column_spec(1, width = "1.5cm", color = "blue", bold = F)
+
+return(kbFinal)
+
+}
+
+```
+
+
+\pagebreak 
+
+# EHF1 Watchlist Project Updates 
+   
+
+## **Russell Ranch**\ 
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 139)
+kbInfo
+
+```
+**Next Steps**\      
+ - Project is expected to close out in Jun2024     
+
+
+**Sales/Market**\     
+ - Sales have been slightly behind proforma.  However, LEN reports 51 net sales in Oct2023 which is well above the target pace of 4/mo per product type.       
+ - Traffic has been strong and Russel Ranch is one of the best selling markets in the area     
+ - LEN is offering rate buydowns and seller paid closing costs to move product  
+
+
+\pagebreak   
+
+##  **Greenwood**\          
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 316)
+kbInfo
+
+```    
+**Background**\     
+ - The project is being entitled and developed in five phases (631 total lots; 6 product types)     
+ - The Final Plats record prior to Substantial Completion of the Lots     
+ - LEN Land Banked Phases 1-3; 5-6     
+ - LEN retained Phase 4 Lots; sales were underway prior to the Land Bank COE     
+ - All Final Maps are recorded (+/-10 months behind proforma and first takedown date)     
+ - Phase 5 (146 lots): The Lots are Substantially Complete     
+ - Phase 3 (90 lots):  The Lots are Substantially Complete       
+ - Phase 6 (97 lots):  The Lots are Substantially Complete (+/-9 months behind proforma and first takedown date)     
+ - The project is on the IC List for entitlement and substantial completion delays     
+
+**Development**\     
+ - Phase 1 (159 lots):  Site work and is expected to start in early 2024, with Substantial Completion in Nov2024 (+/-10 months behind proforma and first takedown date for those Lots)  
+ - Phase 2 (138 lots):  Site work expected to start in late 2024; with Substantial Completion in mid 2025 (+/-18 months behind proforma and first takedown date for those Lots).  Substantial completion for this phase of lots is expected after the Option End date   
+
+**Sales Commencement**\     
+- The Community is open for sales (5 months ahead of proforma sales commencement date); utilizing models from Phase 4
+- However, LEN reports this Division is a 100% spec builder and will not sale until the home is nearing completion
+
+**Sales/Market**\     
+- Len reports 3 net sales in Nov2023
+- Sales price Incentives up to $40K per home
+- LEN offers rate buydown to 4.5% - 7/6 ARM
+- LEN pays 4% of closing costs
+
+**Next Steps**\     
+ - The Community is on the IC List and will be monitored closely for substantial completion progress.   
+ - It is projected that the Phase 2 lots will not be substantially complete until just prior to the Option End Date     
+ - The Team will seek IC approval to allow LEN to continue acquiring unfinished lot inventory throughout the balance of the Option Term     
+
+\pagebreak 
+
+## **Legacy Village**\     
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 340)
+kbInfo
+
+```    
+**Background**\     
+ - The Final Map was recorded prior to COE      
+ - The Project was developed in 2 phases      
+ - Phase 1 (125 lots):  The Phase 1 lots are Substantially Complete (2 months behind proforma and first takedown date)     
+ - Phase 2 (100 lots):  The Phase 2 lots are Substantially Compete (consistent with proforma and first takedown date)     
+ - Offsite and District Improvements are Substantially Complete      
+ - The Community is open for sales consistent with proforma sales commencement date     
+
+**Sales and Market**\     
+ - Overall sales over proforma for the Quarter.     
+ - ASP above proforma by 8%.     
+
+**Next Steps**\     
+ - Continue with routine Project Reviews     
+
+\pagebreak 
+
+## **Lorraine Lakes**\     
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 363)
+kbInfo
+
+```
+**Background**\    
+ - The project is being entitled and developed in sixteen phases (884 total lots; 5 product types)      
+ - All Final Plats are recorded (+/-6 months behind proforma and first takedown dates for the individual Phases)     
+ - Lots are Substantially Complete in fourteen of the development phases (723 total lots; “A” = 151; "B" = 156; "C" = 80; "D" = 180 & "E" = 156 lots)     
+ - The Community is open for sales (consistent with proforma and sales commencement date)     
+ - The project is on the Watch List for substantial completion delays (up to 8 months behind proforma and first takedown dates for Phase 2)     
+
+**Remaining Development**\			
+ - Phase 2C-3 ("B" = 69 lots):  The Lots are expected to be Substantially Complete in Mar2024 (+/-2 months behind proforma and first takedown date for these lots)    
+ - Phase 2C-4 ("A" = 83 & "B" = 9 lots):  The Lots are expected to be Substantially Complete in May2024 (+/-5 months behind proforma and first takedown date for these lots)    
+ - LEN reports early delays in sourcing materials needed to complete the work for the remaining phases   
+ - Only one of the remaining phases are expected to have delays in substantial completion of more than 5 months    
+
+**Sales/Market**\		
+ - Overall sales exceeding proforma for the Quarter 	 		
+ - Overall ASP over proforma by 17%     
+
+**Watch List Comments**\     			
+ - The project has been on the Watch List due to ongoing development delays.  
+ - While LEN has experienced an eight-month delay in achieving substantial completion for Phase 2C-2 the lots are now Substantially Complete      
+
+\pagebreak 
+
+## **Middle Vistas**\        
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 209)
+kbInfo
+
+```
+**Background**\      
+ - The project is being entitled and developed in one phase (228 lots; 2 product types)     
+ - The Final Plat was recorded prior to COE     
+ - The Lots are now Substantially Complete (17 months behind proforma and first takedown date)     
+ - LEN has reported delays were due to utility borings that needed to be done under a BLM owned canal and plan approvals      
+ - LEN has been taking down unfinished lots since May2022      
+ - The project is on the Watch List for substantial completion and sales commencement delays      
+
+**Sales/Market**\      
+ - The Community is now open for sales (+/-10 months behind proforma sales commencement date)     
+ - A Model completion is expected in Mar2024     
+ - As of December there had been no sales for the A Lots/Discovery Collection and a total of 5 B/Horizon units.     
+    - Sales for both lots types just opened.     
+ - LEN is targeting a pace of 4 per month     
+ - LEN is not offering any price concessions at this time, but offering buydowns and seller paid closing costs     
+	
+**Watch List Comments**\    
+ - The project has been on the Watch List due to extended development and Sales Commencement delays      
+ - However, LEN has been acquiring partially completed lots consistent with the Lot Takedown schedule up until Oct2023.        
+ - The lots are now substantially complete, and sales have commenced       
+
+**Next Steps**\    
+ - Continue to monitor sales and the completion of the models      
+ - Continue with routine Project Reviews      
+
+\pagebreak 
+
+## **Pioneer Village**\   
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 211)
+kbInfo
+
+```
+**Background**\     
+ - The project was entitled and developed in one phase (231 total lots; 2 product types)          
+ - The Final Map is recorded (2 months behind proforma and first takedown date)     
+ - The Lots are Substantially Complete (2 months behind proforma and first takedown date)     
+ - The Community is open for sales (+/-10 months behind proforma sales commencement date)     
+ - Proforma plan was to pre-sell while the models were under construction; however, due to the change in market conditions     
+ - LEN changed the sales strategy to start sales after the models were complete and open       
+ - The Community is on the Watch List for sales commencement delays     
+
+**Sales/Market**\     
+ - LEN reports strong traffic and interest in this community     
+ - LEN's strategy is to have consistent starts, sales and closings.       
+ - They are marketing to local and Bay area buyers, looking for affordability     
+ - LEN is offering rate buydowns and seller paid closing costs     
+ - Current sales pace is 4/mo per product type.  
+ - LEN is on target with the sales pace for Sep2023 and Oct2023     
+
+**Next Steps**\          
+ - While the project has been on the Watch List due to an extended Sales Commencement delay, it is now open for sales     
+ - There is no remaining risk of future Development Strategy delays as all lots are substantially complete and the Final Map is recorded               
+
+\pagebreak 
+
+## **Russell Ranch**\       	
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 139)
+kbInfo
+
+```
+**Background**\      	
+ - The Project was entitled and developed in two phases (513 total lots; Phase 1 = 242 & Phase 2 = 271 lots)             
+ - The Final Map records prior to substantial completion of the lots     
+ - The Final Maps are recorded (consistent with proforma and first takedown date)     
+ - The Phase 1 Lots are Substantially Complete (2 months behind proforma and first takedown date)     
+ - The Phase 2 lots are complete including energizing the lift station (+/-8 months behind proforma and first takedown date)     
+ - The Community is open for sales with completed models (consistent with proforma and first takedown date)     
+ - The Community was on the Watch List for substantial completion of the Phase 2 Lots     
+
+**Sales/Market**\     
+ - Sales have been slightly behind proforma.  However, LEN reports 51 net sales in Oct2023 which is well above the target pace of 4/mo per product type.       
+ - Traffic has been strong and Russel Ranch is one of the best selling markets in the area     
+ - LEN is offering rate buydowns and seller paid closing costs to move product     
+
+**Next Steps**\         
+ - All Final Maps are recorded, all lots are substantially complete, and the Community is open for sale     
+ - Continue with routine Project Reviews
+
+\pagebreak 
+
+## **Walnut Creek**\            	
+```{r echo=FALSE}
+
+kbInfo <- f01_GetProjectDetails(project_lookup = 158)
+kbInfo
+
+```
+**Background**\     
+ - The 367-Lot Property includes seven entitlement and development phases, of which six were substantially complete with recorded Final Plats at the COE     
+ - The Final Map records after substantial completion of each development phase     
+ - While the site improvements for these last lots are complete, LEN needs to fill in some basin swells & stabilize the surrounding areas before this seventh phases will be considered substantially complete      
+ - Since there are 22 lots in the Final Phase not impacted by the incomplete basins, LEN opted to submit a revised Final Plat, which Recorded in late Aug2023 (+/-3 months behind proforma and takedowns for those lots)  
+ - The Community is open for sales (ahead of proforma sales commencement date)  
+
+**Entitlement/Development**\     
+ - There are 27 Land bank lots remaining to be platted and recorded (All "A" Lots)     
+ - The basin-related work is expected to be complete in Dec2023 (+/-6 months behind proforma), at which time 9 more lots will be ready to Record      
+ - The Final 18 lots are not expected to Record until Oct2024, as these sediment basins require all home construction upstream to be 100% complete to deem the lots complete     
+ - Therefore, the last 18 lots are not expected to have a Recorded Plat prior to the Option end date of Mar2024      
+  
+**Impact on Lot Takedowns**\     
+ - Based on the above schedule, the project is expected to be on plat delay in Nov2023-Dec2023, and starting in Feb2024 will not have the last 17 lots platted until after the Option End date       
+
+**Sales/Market**\
+ - Final take down scheduled for MAR2024     
+ - ASP over 49% of proforma     
+
+**Next Steps**\     
+ - The Community is on the IC List, and will not have enough platted lots to takedown in Mar2024 - Option End Date     
+ - LEN plans to acquire the remaining 18 lots via a metes and bounds survey in Mar2024     
+     		
+\pagebreak 
+
